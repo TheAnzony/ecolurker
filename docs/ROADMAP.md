@@ -10,6 +10,14 @@ umbral de inactividad (2 semanas por defecto). Separarlos en dos valores
 (`grace_days` aparte de `inactive_days` en `guild_settings`) permitiría, por
 ejemplo, un umbral largo con un margen de bienvenida corto, o al revés.
 
+## Panel web con escritura y acceso remoto
+
+Hoy el panel es de solo lectura y solo accesible en local, a propósito. Darle
+capacidad de configurar, o abrirlo al staff, exigiría antes login con OAuth2 de
+Discord, comprobar que quien entra es admin del servidor, HTTPS y gestión de
+sesiones. Es un salto de complejidad grande: solo merece la pena si el staff
+va a usarlo de verdad. Mientras tanto, el túnel SSH cubre el acceso remoto.
+
 ## Intervalo de sincronización configurable por servidor
 
 `inactive_days` ya vive en `guild_settings` y se ajusta con `/configurar`.

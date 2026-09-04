@@ -44,6 +44,22 @@ la instancia del bot).
 `services/settingsService.js` resuelve el valor efectivo; el resto del código
 nunca lee el umbral directamente de `config`.
 
+### `stats_snapshots`
+
+Una fila por sincronización con el reparto de miembros en ese momento. Es lo
+que alimenta la gráfica de evolución del [panel web](DASHBOARD.md).
+
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `id` | INTEGER | Autoincremental |
+| `guild_id` | TEXT | Servidor |
+| `taken_at` | INTEGER | Timestamp en milisegundos |
+| `inactive` / `active` / `grace` / `exempt` | INTEGER | Cuántos miembros había en cada estado |
+
+A una medición por hora son unas 8.800 filas al año por servidor: irrelevante
+para SQLite. Es la única tabla que crece con el tiempo en vez de tener una fila
+por miembro.
+
 ### `role_policies`
 
 Trato especial para roles concretos. Ver

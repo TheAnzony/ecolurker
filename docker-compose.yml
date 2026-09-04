@@ -10,3 +10,8 @@ services:
       - .env
     volumes:
       - ./data:/app/data
+    ports:
+      # Publicado SOLO en el localhost del host: el panel no queda accesible
+      # desde la red. Quitar el "127.0.0.1:" lo expondria a internet, y el
+      # panel no tiene autenticacion.
+      - "127.0.0.1:3000:3000"

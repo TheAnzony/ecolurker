@@ -38,6 +38,20 @@ CREATE TABLE IF NOT EXISTS role_policies (
   PRIMARY KEY (guild_id, role_id)
 );
 
+-- Foto del reparto de miembros en cada sincronizacion. Permite ver la evolucion
+-- en el dashboard; sin esto solo se conoceria el estado actual.
+CREATE TABLE IF NOT EXISTS stats_snapshots (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id TEXT NOT NULL,
+  taken_at INTEGER NOT NULL,
+  inactive INTEGER NOT NULL,
+  active   INTEGER NOT NULL,
+  grace    INTEGER NOT NULL,
+  exempt   INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_snapshots_guild ON stats_snapshots (guild_id, taken_at);
+
 -- Historial de acciones de moderacion aplicadas por /moderar-inactivos
 CREATE TABLE IF NOT EXISTS moderation_actions (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ecolurker — Panel</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --border: #e2e5ea;
+    --text: #1a1d21;
+    --muted: #6b7280;
+    --inactivo: #ed4245;
+    --activo: #3ba55d;
+    --gracia: #faa61a;
+    --exento: #5865f2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c;
+      --panel: #1e2126;
+      --border: #2e3339;
+      --text: #e6e8eb;
+      --muted: #9aa3ad;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 64px; }
+
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+  header img { width: 44px; height: 44px; border-radius: 50%; }
+  h1 { font-size: 22px; margin: 0; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 26px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 26px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-left-width: 4px; border-radius: 10px; padding: 14px 16px; }
+  .card b { display: block; font-size: 30px; font-weight: 650; line-height: 1.1; }
+  .card span { color: var(--muted); font-size: 13px; }
+  .c-inactivo { border-left-color: var(--inactivo); }
+  .c-activo   { border-left-color: var(--activo); }
+  .c-gracia   { border-left-color: var(--gracia); }
+  .c-exento   { border-left-color: var(--exento); }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-bottom: 22px; }
+  .panel h2 { font-size: 15px; margin: 0 0 14px; font-weight: 650; }
+
+  .meta { display: flex; flex-wrap: wrap; gap: 22px; font-size: 14px; }
+  .meta div { color: var(--muted); }
+  .meta b { color: var(--text); font-weight: 600; }
+
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  input[type=search], select {
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 7px;
+    padding: 8px 11px; font: inherit; font-size: 14px;
+  }
+  input[type=search] { flex: 1; min-width: 200px; }
+  input[type=search]:focus, select:focus { outline: 2px solid var(--exento); outline-offset: 1px; }
+
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; }
+  th:hover { color: var(--text); }
+  tbody tr:hover { background: color-mix(in srgb, var(--border) 40%, transparent); }
+  td.nombre { white-space: normal; font-weight: 550; }
+
+  .tag { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #fff; }
+  .t-inactivo { background: var(--inactivo); }
+  .t-activo   { background: var(--activo); }
+  .t-gracia   { background: var(--gracia); }
+  .t-exento   { background: var(--exento); }
+
+  .muted { color: var(--muted); }
+  .warn { color: var(--gracia); }
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 30px; }
+  .empty { color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <p class="muted">Cargando…</p>
+</div>
+
+<script>
+const app = document.getElementById('app');
+
+let datos = null;
+let montado = false;              // el armazon solo se construye una vez
+let orden = { col: 'ultimaVoz', asc: true };
+let filtroTexto = '';
+let filtroEstado = 'todos';
+
+const ETIQUETAS = { inactivo: 'Inactivo', activo: 'Activo', gracia: 'En gracia', exento: 'Exento' };
+const COLUMNAS = [
+  ['nombre', 'Apodo'],
+  ['estado', 'Estado'],
+  ['ultimaVoz', 'Última voz'],
+  ['desde', 'En el servidor desde'],
+  ['plazo', 'Plazo'],
+];
+
+function escapar(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function fecha(ms) {
+  if (!ms) return null;
+  return new Date(ms).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function haceCuanto(ms) {
+  if (!ms) return '—';
+  const dias = Math.floor((Date.now() - ms) / 86400000);
+  if (dias <= 0) return 'hoy';
+  if (dias === 1) return 'hace 1 día';
+  return 'hace ' + dias + ' días';
+}
+
+function grafica(historico) {
+  if (!historico || historico.length < 2) {
+    return '<p class="empty">Aún no hay suficientes datos. Se guarda una medición en cada sincronización, así que la gráfica aparecerá sola con el paso de las horas.</p>';
+  }
+  const W = 1000, H = 220, P = 30;
+  const max = Math.max(...historico.map(p => p.inactive + p.active + p.grace + p.exempt));
+  const x = i => P + (i * (W - P * 2)) / (historico.length - 1);
+  const y = v => H - P - (v * (H - P * 2)) / (max || 1);
+  const serie = (clave, color) => {
+    const d = historico.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p[clave]).toFixed(1)).join(' ');
+    return '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linejoin="round"/>';
+  };
+  return '<div class="scroll"><svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;min-width:500px;height:auto">' +
+    '<line x1="' + P + '" y1="' + (H - P) + '" x2="' + (W - P) + '" y2="' + (H - P) + '" stroke="var(--border)" stroke-width="1"/>' +
+    serie('inactive', 'var(--inactivo)') + serie('active', 'var(--activo)') +
+    serie('grace', 'var(--gracia)') + serie('exempt', 'var(--exento)') +
+    '<text x="' + P + '" y="16" fill="var(--muted)" font-size="13">' + max + ' máx.</text>' +
+    '</svg></div>' +
+    '<p class="muted" style="font-size:13px;margin:6px 0 0">' +
+    '<span style="color:var(--inactivo)">■</span> inactivos &nbsp; ' +
+    '<span style="color:var(--activo)">■</span> activos &nbsp; ' +
+    '<span style="color:var(--gracia)">■</span> en gracia &nbsp; ' +
+    '<span style="color:var(--exento)">■</span> exentos &nbsp;·&nbsp; ' +
+    historico.length + ' mediciones, desde ' + fecha(historico[0].takenAt) + '</p>';
+}
+
+function filas(miembros) {
+  let lista = miembros.slice();
+  if (filtroEstado !== 'todos') lista = lista.filter(m => m.estado === filtroEstado);
+  if (filtroTexto) {
+    const q = filtroTexto.toLowerCase();
+    lista = lista.filter(m => (m.nombre || '').toLowerCase().includes(q));
+  }
+  lista.sort((a, b) => {
+    let va = a[orden.col], vb = b[orden.col];
+    // "nunca registrada" equivale a la actividad mas antigua posible, no a la
+    // ausencia de dato: asi quien nunca ha pisado voz encabeza la lista de
+    // inactivos en vez de quedar al final.
+    if (va === null || va === undefined) va = 0;
+    if (vb === null || vb === undefined) vb = 0;
+    if (typeof va === 'string') return orden.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return orden.asc ? va - vb : vb - va;
+  });
+  return lista;
+}
+
+/**
+ * Arma la pagina una sola vez. A partir de ahi solo se refrescan los trozos
+ * que cambian: si se reconstruyera todo en cada pulsacion, el buscador se
+ * destruiria y el cursor volveria al principio, escribiendo el texto al reves.
+ */
+function montar(s) {
+  app.innerHTML =
+    '<header>' + (s.servidor.icono ? '<img src="' + escapar(s.servidor.icono) + '" alt="">' : '') +
+      '<div><h1>' + escapar(s.servidor.nombre) + '</h1></div></header>' +
+    '<p class="sub" id="sub"></p>' +
+    '<div class="cards" id="cards"></div>' +
+    '<div class="panel"><h2>Configuración</h2><div id="config"></div></div>' +
+    '<div class="panel"><h2>Evolución (últimos 30 días)</h2><div id="grafica"></div></div>' +
+    '<div class="panel"><h2>Miembros</h2>' +
+      '<div class="controls">' +
+        '<input type="search" id="buscar" placeholder="Buscar por apodo…" autocomplete="off">' +
+        '<select id="estado">' +
+          ['todos', 'inactivo', 'activo', 'gracia', 'exento'].map(v =>
+            '<option value="' + v + '">' + (v === 'todos' ? 'Todos los estados' : ETIQUETAS[v]) + '</option>').join('') +
+        '</select>' +
+      '</div>' +
+      '<div class="scroll"><table><thead><tr id="cabecera"></tr></thead><tbody id="cuerpo"></tbody></table></div>' +
+      '<p class="muted" style="font-size:12px;margin:10px 0 0" id="contador"></p>' +
+    '</div>' +
+    '<footer>Panel de solo lectura · la configuración se cambia con los comandos de Discord</footer>';
+
+  document.getElementById('buscar').addEventListener('input', (e) => {
+    filtroTexto = e.target.value;
+    pintarTabla();          // no toca el input, el cursor se queda donde estaba
+  });
+  document.getElementById('estado').addEventListener('change', (e) => {
+    filtroEstado = e.target.value;
+    pintarTabla();
+  });
+  document.getElementById('cabecera').addEventListener('click', (e) => {
+    const th = e.target.closest('th[data-col]');
+    if (!th) return;
+    const col = th.dataset.col;
+    if (orden.col === col) orden.asc = !orden.asc;
+    else { orden.col = col; orden.asc = true; }
+    pintarTabla();
+  });
+
+  montado = true;
+}
+
+function pintarTabla() {
+  const s = datos.servidores[0];
+  const lista = filas(s.miembros);
+
+  document.getElementById('cabecera').innerHTML = COLUMNAS.map(([col, txt]) =>
+    '<th data-col="' + col + '">' + txt + (orden.col === col ? (orden.asc ? ' ↑' : ' ↓') : '') + '</th>').join('');
+
+  document.getElementById('cuerpo').innerHTML = lista.length
+    ? lista.map(m =>
+        '<tr>' +
+          '<td class="nombre">' + escapar(m.nombre) + '</td>' +
+          '<td><span class="tag t-' + m.estado + '">' + ETIQUETAS[m.estado] + '</span></td>' +
+          '<td>' + (m.ultimaVoz ? haceCuanto(m.ultimaVoz) : '<span class="muted">nunca registrada</span>') + '</td>' +
+          '<td class="muted">' + (fecha(m.desde) || '—') + '</td>' +
+          '<td class="muted">' + m.plazo + 'd' + (m.plazoPropio ? ' *' : '') + '</td>' +
+        '</tr>').join('')
+    : '<tr><td colspan="5" class="empty">Sin resultados.</td></tr>';
+
+  document.getElementById('contador').innerHTML =
+    lista.length + ' de ' + s.miembros.length + ' miembros · <b>*</b> plazo propio por política de rol';
+}
+
+function pintar() {
+  const s = datos.servidores[0];
+  if (!s) { app.innerHTML = '<p class="empty">El bot no está en ningún servidor.</p>'; return; }
+  if (!montado) montar(s);
+
+  document.getElementById('sub').textContent =
+    s.servidor.miembros + ' miembros · actualizado ' + fecha(s.generadoEn);
+
+  document.getElementById('cards').innerHTML = ['inactivo', 'activo', 'gracia', 'exento'].map(k =>
+    '<div class="card c-' + k + '"><b>' + s.totales[k] + '</b><span>' + ETIQUETAS[k] + '</span></div>').join('');
+
+  document.getElementById('config').innerHTML =
+    '<div class="meta">' +
+      '<div>Plazo de inactividad: <b>' + s.config.dias + ' días</b></div>' +
+      '<div>Revisión: <b>cada ' + s.config.intervaloHoras + 'h</b></div>' +
+      '<div>Rol: <b>' + escapar(s.config.rol || '—') + '</b></div>' +
+      '<div>Expulsiones: <b class="' + (s.config.expulsionesActivas ? 'warn' : '') + '">' +
+        (s.config.expulsionesActivas ? 'ACTIVADAS' : 'desactivadas') + '</b></div>' +
+    '</div>' +
+    (s.politicas.length
+      ? '<div style="margin-top:14px">' + s.politicas.map(p =>
+          '<div class="meta" style="margin-bottom:6px"><div><b>' + escapar(p.rol) + '</b> — ' + p.dias + ' días · ' +
+          (p.marca ? 'se marca' : 'exento') + ' · ' + (p.retira ? 'pierde el rol' : 'conserva el rol') + '</div></div>').join('') + '</div>'
+      : '<p class="muted" style="margin:14px 0 0;font-size:13px">Sin políticas por rol. Se configuran con <code>/configurar rol</code>.</p>');
+
+  document.getElementById('grafica').innerHTML = grafica(s.historico);
+
+  pintarTabla();
+}
+
+async function cargar() {
+  try {
+    const r = await fetch('/api/estado');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    datos = await r.json();
+    pintar();
+  } catch (e) {
+    if (!montado) app.innerHTML = '<p class="warn">No se pudo cargar: ' + escapar(e.message) + '</p>';
+  }
+}
+
+cargar();
+setInterval(cargar, 60000);
+</script>
+</body>
+</html>

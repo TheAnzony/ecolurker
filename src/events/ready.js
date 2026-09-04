@@ -3,6 +3,7 @@ const config = require('../config');
 const logger = require('../utils/logger');
 const { initializeGuild } = require('../services/guildSetupService');
 const { syncAllGuilds } = require('../services/roleSyncService');
+const { startDashboard } = require('../dashboard/server');
 
 module.exports = {
   name: Events.ClientReady,
@@ -26,5 +27,9 @@ module.exports = {
     }, intervalMs);
 
     logger.info(`Sincronizacion de rol programada cada ${config.syncIntervalHours}h`);
+
+    // Se arranca aqui y no en index.js: el dashboard consulta la cache de
+    // miembros, que solo esta poblada una vez la sesion esta lista.
+    startDashboard(client);
   },
 };

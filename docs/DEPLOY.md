@@ -150,6 +150,16 @@ scp usuario@IP:~/ecolurker/data/backup-*.db .
 desactiva el login de root por contraseña, y no abras ningún puerto — este bot
 no necesita ninguno abierto, solo salida a internet.
 
+**El panel web tampoco necesita puerto abierto.** Para verlo desde tu PC, usa
+un túnel SSH:
+
+```bash
+ssh -L 3000:localhost:3000 usuario@IP
+```
+
+Con esa sesión abierta, `http://localhost:3000` en tu navegador muestra el panel
+del servidor. Ver [DASHBOARD.md](DASHBOARD.md).
+
 ---
 
 # Actualizar el bot ya desplegado

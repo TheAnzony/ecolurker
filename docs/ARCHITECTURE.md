@@ -31,6 +31,10 @@ events / commands  ->  services  ->  db/repository  ->  db (SQLite)
 - **`handlers/`** cargan dinámicamente todo lo que hay en `commands/` y
   `events/` para que agregar un comando o evento nuevo sea solo "crear el
   archivo", sin tocar `index.js`.
+- **`dashboard/`** es un panel web de solo lectura que corre en el mismo
+  proceso. Consume el mismo `evaluateGuildInactivity` que el sincronizador, así
+  que no puede desviarse de lo que el bot hace de verdad. Ver
+  [DASHBOARD.md](DASHBOARD.md).
 
 ## Flujo de datos: detección de inactividad
 

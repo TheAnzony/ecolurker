@@ -77,6 +77,14 @@ async function syncGuild(guild, days = null) {
     }
   }
 
+  // Foto del reparto para poder ver la evolucion en el dashboard
+  repository.recordSnapshot(guild.id, {
+    inactive: inactive.length,
+    active: active.length,
+    grace: newMembers.length,
+    exempt: exempt.length,
+  });
+
   logger.info(
     `Sync de rol en "${guild.name}": ${result.added} marcados, ` +
       `${result.removed} desmarcados, ${result.stripped} roles retirados, ` +

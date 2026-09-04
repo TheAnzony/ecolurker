@@ -30,6 +30,8 @@ La imagen y el contenedor Docker se llaman `ecolurker`, igual que el bot.
 - **Se autoconfigura en cualquier servidor.** Al añadirlo a uno nuevo, crea el
   rol `Inactivo`, registra a los miembros y aplica el marcado inicial él solo.
   No hay que configurar `INACTIVE_ROLE_ID` ni ejecutar ningún comando.
+- **Panel web** en `http://localhost:3000` con la lista ordenable, buscador y
+  la evolución del servidor. Solo lectura y solo accesible en local.
 
 ## Stack
 
@@ -45,6 +47,7 @@ La imagen y el contenedor Docker se llaman `ecolurker`, igual que el bot.
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Estructura del proyecto, flujo de datos, decisiones de diseño |
 | [docs/DATABASE.md](docs/DATABASE.md) | Esquema SQLite, tablas y su ciclo de vida |
 | [docs/COMMANDS.md](docs/COMMANDS.md) | Referencia de los slash commands |
+| [docs/DASHBOARD.md](docs/DASHBOARD.md) | Panel web de solo lectura: qué muestra y cómo acceder |
 | [docs/OPERATION.md](docs/OPERATION.md) | Operación diaria: ajustar el umbral, revertir, backups, troubleshooting |
 | [docs/DEPLOY.md](docs/DEPLOY.md) | Migrar el bot a un VPS para tenerlo 24/7 |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Casos pendientes y mejoras futuras |
@@ -95,7 +98,8 @@ src/
   handlers/     Carga dinámica de comandos y eventos
   services/     Lógica de negocio (inactividad, rol, sincronización, moderación)
   db/           Conexión SQLite, esquema y capa de acceso a datos
-  tools/        Utilidades de terminal (consulta.js)
+  dashboard/    Panel web de solo lectura (servidor + página)
+  tools/        Utilidades de terminal (consulta.js, backup.js)
   config.js     Lectura y validación de variables de entorno
   index.js      Punto de entrada del bot
   deploy-commands.js   Script para registrar los slash commands en Discord

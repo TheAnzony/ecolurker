@@ -104,6 +104,18 @@ const statements = {
     DELETE FROM role_policies WHERE guild_id = @guildId AND role_id = @roleId
   `),
 
+  insertSnapshot: db.prepare(`
+    INSERT INTO stats_snapshots (guild_id, taken_at, inactive, active, grace, exempt)
+    VALUES (@guildId, @takenAt, @inactive, @active, @grace, @exempt)
+  `),
+
+  getSnapshots: db.prepare(`
+    SELECT taken_at AS takenAt, inactive, active, grace, exempt
+    FROM stats_snapshots
+    WHERE guild_id = @guildId AND taken_at >= @since
+    ORDER BY taken_at
+  `),
+
   insertModerationAction: db.prepare(`
     INSERT INTO moderation_actions (user_id, guild_id, action, reason, created_at)
     VALUES (@userId, @guildId, @action, @reason, @timestamp)
@@ -195,6 +207,15 @@ function deleteRolePolicy(guildId, roleId) {
   return statements.deleteRolePolicy.run({ guildId, roleId }).changes > 0;
 }
 
+function recordSnapshot(guildId, counts, takenAt = Date.now()) {
+  statements.insertSnapshot.run({ guildId, takenAt, ...counts });
+}
+
+function getSnapshots(guildId, sinceDays = 30) {
+  const since = Date.now() - sinceDays * 24 * 60 * 60 * 1000;
+  return statements.getSnapshots.all({ guildId, since });
+}
+
 function logModerationAction(userId, guildId, action, reason, timestamp = Date.now()) {
   statements.insertModerationAction.run({ userId, guildId, action, reason, timestamp });
 }
@@ -210,6 +231,8 @@ module.exports = {
   getRolePolicies,
   setRolePolicy,
   deleteRolePolicy,
+  recordSnapshot,
+  getSnapshots,
   recordMemberFirstSeen,
   refreshDisplayNames,
   getMembersFirstSeenMap,

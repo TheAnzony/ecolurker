@@ -1,0 +1,12 @@
+name: ecolurker
+
+services:
+  bot:
+    build: .
+    image: ecolurker:latest
+    container_name: ecolurker
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data

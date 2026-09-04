@@ -93,7 +93,7 @@ npm run dev
 
 ```
 src/
-  commands/     Slash commands (/configurar, /inactivos, /sincronizar-roles, /moderar-inactivos)
+  commands/     Slash commands (/ayuda, /configurar, /inactivos, /sincronizar-roles, /moderar-inactivos)
   events/       Listeners de discord.js (voiceStateUpdate, ready, ...)
   handlers/     Carga dinámica de comandos y eventos
   services/     Lógica de negocio (inactividad, rol, sincronización, moderación)

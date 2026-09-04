@@ -28,6 +28,17 @@ protegido sin tener que acordarse.
 
 Los comandos tampoco funcionan por mensaje directo (`setContexts(Guild)`).
 
+## `/ayuda`
+
+Recordatorio dentro de Discord de qué comandos hay y qué hace el bot: el plazo
+y el intervalo vigentes en ese servidor, la lista de comandos con sus
+parámetros, y la dirección del panel web. Respuesta efímera (solo la ves tú).
+
+La lista **se genera recorriendo los comandos realmente cargados**, no de una
+lista escrita a mano. Así cualquier comando nuevo aparece solo y ninguna
+descripción puede quedarse desactualizada. Los parámetros obligatorios salen en
+**negrita** y los opcionales con `?`.
+
 ## `/configurar`
 
 Configura cómo se trata la inactividad en este servidor. Todos los cambios se

@@ -100,6 +100,11 @@ con rol superior, así que intentarlo solo genera ruido.
 Para eximir a moderadores u otros roles se usa `/configurar rol` con
 `marcar:false`.
 
+> No confundir con quién puede **usar los comandos**, que exige `Administrator`
+> a secas (ver [COMMANDS.md](COMMANDS.md#quién-puede-usarlos)). La exención del
+> rol es algo más amplia a propósito: incluye `Manage Server` porque el bot
+> tampoco podría gestionar a esos miembros aunque quisiera.
+
 ### Políticas por rol
 
 `services/policyService.js` resuelve, para cada miembro, qué reglas se le
@@ -215,9 +220,8 @@ una expulsión masiva accidental.
 pase explícitamente `confirmar: true`. Sin ese flag, el comando solo muestra
 una vista previa de a quién afectaría. Esto evita expulsiones o asignaciones
 de rol masivas por accidente (parámetro por defecto o mal-entendido). El
-comando además requiere permisos de `Kick Members` en Discord
-(`setDefaultMemberPermissions`), así que por defecto solo administradores
-pueden verlo en la lista de comandos.
+comando, como todos, solo lo pueden usar administradores (ver
+[COMMANDS.md](COMMANDS.md#quién-puede-usarlos)).
 
 Cada acción ejecutada (no en dry-run) se registra en `moderation_actions`
 para dejar un historial auditable de qué se hizo y cuándo.

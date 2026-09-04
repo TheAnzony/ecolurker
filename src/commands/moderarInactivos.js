@@ -1,4 +1,10 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  PermissionFlagsBits,
+  InteractionContextType,
+  MessageFlags,
+} = require('discord.js');
 const { evaluateGuildInactivity } = require('../services/inactivityService');
 const { getInactiveDays } = require('../services/settingsService');
 const { applyAction } = require('../services/moderationService');
@@ -8,7 +14,8 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('moderar-inactivos')
     .setDescription('Aplica una accion de moderacion a los miembros inactivos en voz')
-    .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setContexts(InteractionContextType.Guild)
     // Discord exige que las opciones obligatorias se declaren antes que las opcionales
     .addStringOption((option) =>
       option
@@ -38,7 +45,7 @@ module.exports = {
     const action = interaction.options.getString('accion', true);
     const confirmed = interaction.options.getBoolean('confirmar') ?? false;
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     await ensureMembersCached(interaction.guild);
     const { inactive } = evaluateGuildInactivity(interaction.guild, days);

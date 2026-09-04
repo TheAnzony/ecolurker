@@ -1,11 +1,18 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  PermissionFlagsBits,
+  InteractionContextType,
+  MessageFlags,
+} = require('discord.js');
 const { syncGuild } = require('../services/roleSyncService');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('sincronizar-roles')
     .setDescription('Fuerza la sincronizacion del rol Inactivo sin esperar al ciclo automatico')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setContexts(InteractionContextType.Guild)
     .addIntegerOption((option) =>
       option
         .setName('dias')
@@ -16,7 +23,7 @@ module.exports = {
   async execute(interaction) {
     const days = interaction.options.getInteger('dias');
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const result = await syncGuild(interaction.guild, days);
 

@@ -1,4 +1,9 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  PermissionFlagsBits,
+  InteractionContextType,
+} = require('discord.js');
 const { evaluateGuildInactivity } = require('../services/inactivityService');
 const { getInactiveDays } = require('../services/settingsService');
 const { formatRelativeDays } = require('../utils/time');
@@ -10,7 +15,8 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('inactivos')
     .setDescription('Lista los miembros inactivos en canales de voz')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setContexts(InteractionContextType.Guild)
     .addIntegerOption((option) =>
       option
         .setName('dias')

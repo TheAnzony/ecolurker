@@ -1,4 +1,10 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  PermissionFlagsBits,
+  InteractionContextType,
+  MessageFlags,
+} = require('discord.js');
 const config = require('../config');
 const repository = require('../db/repository');
 const settings = require('../services/settingsService');
@@ -14,7 +20,8 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('configurar')
     .setDescription('Configura como se trata la inactividad en este servidor')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setContexts(InteractionContextType.Guild)
     .addSubcommand((sub) =>
       sub.setName('ver').setDescription('Muestra la configuracion actual del servidor')
     )
@@ -78,7 +85,7 @@ module.exports = {
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     if (sub === 'ver') return showConfig(interaction);
     if (sub === 'dias') return setDays(interaction);

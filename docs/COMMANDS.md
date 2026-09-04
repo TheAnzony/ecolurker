@@ -5,11 +5,34 @@
 > Estos comandos son para consultar el estado, ajustar el umbral o forzar una
 > pasada; no hacen falta para el funcionamiento normal.
 
+## Quién puede usarlos
+
+**Solo administradores** (permiso `Administrador` de Discord). Quien no lo
+tenga ni siquiera ve los comandos en la lista, y si consigue invocarlos recibe
+un aviso privado y no se ejecuta nada.
+
+La restricción está en dos capas:
+
+1. `setDefaultMemberPermissions(Administrator)` en cada comando: Discord los
+   oculta y bloquea por su cuenta.
+2. Una comprobación en `events/interactionCreate.js` que rechaza a quien no sea
+   administrador.
+
+La segunda no es redundante. La primera es solo el permiso **por defecto**: un
+administrador puede conceder un comando a otros roles desde Ajustes →
+Integraciones, y si esa excepción ya existiera, cambiar el valor por defecto no
+la eliminaría. La comprobación en código es la que manda de verdad.
+
+Al estar centralizada, cualquier comando que se añada en el futuro queda
+protegido sin tener que acordarse.
+
+Los comandos tampoco funcionan por mensaje directo (`setContexts(Guild)`).
+
 ## `/configurar`
 
-Configura cómo se trata la inactividad en este servidor. Permiso requerido:
-`Manage Server`. Todos los cambios se aplican al momento (lanzan una
-sincronización) y quedan guardados por servidor en la base de datos.
+Configura cómo se trata la inactividad en este servidor. Todos los cambios se
+aplican al momento (lanzan una sincronización) y quedan guardados por servidor
+en la base de datos.
 
 ### `/configurar ver`
 
@@ -80,8 +103,7 @@ Elimina la política de un rol; sus miembros vuelven a las reglas generales.
 Lista los miembros del servidor sin actividad en voz durante más de `dias`
 días.
 
-- **Permiso requerido**: `Moderate Members` (Discord oculta el comando a
-  quien no lo tenga).
+- **Permiso requerido**: `Administrador`.
 - **Parámetros**:
   - `dias` (opcional, entero ≥ 1): umbral puntual. Si se omite, usa el
     configurado en el servidor con `/configurar`.
@@ -104,7 +126,7 @@ Fuerza una pasada de sincronización del rol `@Inactivo` sin esperar al ciclo
 automático. Útil tras cambiar `DEFAULT_INACTIVE_DAYS` o para comprobar el
 estado al momento.
 
-- **Permiso requerido**: `Manage Roles`.
+- **Permiso requerido**: `Administrador`.
 - **Parámetros**: `dias` (opcional, entero ≥ 1).
 - **Respuesta**: efímera, con cuántos miembros se marcaron, desmarcaron y
   fallaron.
@@ -116,7 +138,7 @@ Aplica una acción de moderación a los miembros inactivos.
 > Discord exige que las opciones obligatorias se declaren antes que las
 > opcionales, por eso `accion` va primero en la firma del comando.
 
-- **Permiso requerido**: `Kick Members`.
+- **Permiso requerido**: `Administrador`.
 - **Parámetros**:
   - `accion` (obligatorio): uno de
     - `rol` — asigna el rol `INACTIVE_ROLE_ID` (debe estar configurado en

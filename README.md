@@ -5,7 +5,37 @@ Bot de Discord que detecta la inactividad en canales de voz y mantiene un rol
 
 La imagen y el contenedor Docker se llaman `ecolurker`, igual que el bot.
 
-## Cómo se comporta
+## Qué es y para qué sirve
+
+En un servidor de Discord que crece con el tiempo es habitual acumular
+miembros que ya no participan: entraron en algún momento, nunca volvieron a
+usar la voz, y siguen ahí ocupando un puesto en la lista de miembros sin que
+nadie lo note. Detectarlos a mano —revisando quién habla y quién no— no
+escala pasados unos pocos cientos de personas, y hacerlo mal (marcar a alguien
+que sí participa, u olvidarse de alguien que no) genera fricción con la
+comunidad.
+
+Ecolurker automatiza esa detección específicamente para **canales de voz**
+(no mensajes de texto, que es una señal de actividad distinta y con su propia
+casuística): escucha cuándo cada persona entra y sale de voz, y mantiene un
+rol `@Inactivo` que siempre refleja quién lleva más del plazo configurado sin
+conectarse. Todo el marcado y desmarcado ocurre solo, sin que un
+administrador tenga que revisar nada manualmente ni ejecutar comandos día a
+día.
+
+El diseño parte de una premisa deliberada: **es una herramienta de
+moderación, no de expulsión**. Por defecto, lo único que hace es poner y
+quitar un rol —una acción reversible y de bajo riesgo—, nunca expulsar ni
+banear. Eso permite usarlo con confianza desde el primer día, incluso en un
+servidor consolidado con cientos de miembros, sin miedo a un efecto masivo
+irreversible por un fallo de configuración.
+
+Pensado para correr de forma continua (`restart: unless-stopped`, ver
+[docs/DEPLOY.md](docs/DEPLOY.md)) y para operarse casi por completo desde
+Discord: la configuración del día a día se hace con `/configurar`, sin tocar
+archivos ni reiniciar el contenedor.
+
+## Funcionalidades
 
 - **Todos empiezan inactivos.** Quien no tenga actividad de voz registrada se
   marca como inactivo. La lista se depura sola conforme la gente use los
@@ -112,3 +142,7 @@ data/           Volumen persistente para la base de datos (Docker)
 ```
 
 Detalle completo en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Licencia
+
+[MIT](LICENSE).

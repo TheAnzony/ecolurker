@@ -1,0 +1,7 @@
+# Normaliza los finales de linea al hacer commit, sea cual sea el sistema
+# operativo o la configuracion de git de quien commitee.
+* text=auto eol=lf
+
+# Los scripts de shell DEBEN llevar LF si o si: se ejecutan en el VPS (Linux),
+# y un CRLF colado ahi rompe el script con errores dificiles de diagnosticar.
+*.sh text eol=lf

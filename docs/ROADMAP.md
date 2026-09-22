@@ -31,12 +31,15 @@ Actualmente se truncan los resultados a 40 miembros en un solo embed. Con
 servidores grandes conviene paginar con botones (`ActionRowBuilder` +
 `ButtonBuilder`) o exportar la lista completa como archivo adjunto.
 
-## Canal de auditoría
+## Canal de auditoría en Discord
 
-Además de guardar `moderation_actions` en SQLite, publicar cada acción
-ejecutada en un canal de logs configurable (`AUDIT_CHANNEL_ID`), útil para
-que el resto del staff vea la actividad de moderación sin consultar la base
-de datos.
+Ya se guarda todo lo que hace el bot (`moderation_actions`) y quién ejecuta
+qué comando (`command_log`), consultable desde el panel web o con
+`src/tools/auditoria.js`. Lo que falta es la parte "empujada": publicar cada
+evento en un canal de logs configurable (`AUDIT_CHANNEL_ID`) para que el staff
+lo vea sin tener que entrar a mirarlo. Útil sobre todo para las retiradas de
+rol especial, que afectan a gente de golpe y hoy solo se notan si alguien
+consulta el registro.
 
 ## Rate limiting en lotes grandes
 

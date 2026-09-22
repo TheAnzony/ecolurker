@@ -6,7 +6,7 @@ const {
 } = require('discord.js');
 const { evaluateGuildInactivity } = require('../services/inactivityService');
 const { getInactiveDays } = require('../services/settingsService');
-const { formatRelativeDays } = require('../utils/time');
+const { formatRelativeDays, formatExact } = require('../utils/time');
 const { ensureMembersCached } = require('../utils/members');
 
 const MAX_LISTED = 40;
@@ -49,7 +49,7 @@ module.exports = {
       if (source === 'never_voice') {
         return `${member} — _sin actividad de voz registrada_${custom}${exemptTag}`;
       }
-      return `${member} — ${formatRelativeDays(lastActivity)}${custom}${exemptTag}`;
+      return `${member} — ${formatExact(lastActivity)} _(${formatRelativeDays(lastActivity)})_${custom}${exemptTag}`;
     });
 
     const embed = new EmbedBuilder()

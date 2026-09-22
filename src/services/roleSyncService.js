@@ -44,6 +44,7 @@ async function syncGuild(guild, days = null) {
     if (policy.markInactive && !member.roles.cache.has(role.id)) {
       try {
         await member.roles.add(role, 'Inactividad en canales de voz');
+        repository.logModerationAction(member.id, guild.id, 'mark_inactive', 'sync');
         result.added += 1;
       } catch (err) {
         result.failed += 1;
@@ -70,6 +71,7 @@ async function syncGuild(guild, days = null) {
     if (!member.roles.cache.has(role.id)) continue;
     try {
       await member.roles.remove(role, 'Actividad reciente, periodo de gracia o exento');
+      repository.logModerationAction(member.id, guild.id, 'unmark_inactive', 'sync');
       result.removed += 1;
     } catch (err) {
       result.failed += 1;
@@ -125,6 +127,7 @@ async function clearInactiveRole(member) {
 
   try {
     await member.roles.remove(role, 'Actividad detectada en canales de voz');
+    repository.logModerationAction(member.id, member.guild.id, 'unmark_inactive', 'voice_activity');
     logger.info(`Rol Inactivo retirado a ${member.user.tag} por actividad de voz`);
     return true;
   } catch (err) {

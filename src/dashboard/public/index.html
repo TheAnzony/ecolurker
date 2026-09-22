@@ -103,6 +103,7 @@ const COLUMNAS = [
   ['nombre', 'Apodo'],
   ['estado', 'Estado'],
   ['ultimaVoz', 'Última voz'],
+  ['sesiones', 'Sesiones'],
   ['desde', 'En el servidor desde'],
   ['plazo', 'Plazo'],
 ];
@@ -150,6 +151,21 @@ function grafica(historico) {
     historico.length + ' mediciones, desde ' + fecha(historico[0].takenAt) + '</p>';
 }
 
+function actividad(lista) {
+  if (!lista || lista.length === 0) {
+    return '<p class="empty">Sin actividad registrada todavía.</p>';
+  }
+  return '<div class="scroll"><table><tbody>' +
+    lista.map(a =>
+      '<tr>' +
+        '<td class="muted" style="white-space:nowrap">' + fecha(a.cuando) + '</td>' +
+        '<td><span class="tag ' + (a.tipo === 'comando' ? 't-exento' : 't-gracia') + '">' +
+          (a.tipo === 'comando' ? 'comando' : 'bot') + '</span></td>' +
+        '<td>' + escapar(a.texto) + '</td>' +
+      '</tr>').join('') +
+    '</tbody></table></div>';
+}
+
 function filas(miembros) {
   let lista = miembros.slice();
   if (filtroEstado !== 'todos') lista = lista.filter(m => m.estado === filtroEstado);
@@ -183,6 +199,7 @@ function montar(s) {
     '<div class="cards" id="cards"></div>' +
     '<div class="panel"><h2>Configuración</h2><div id="config"></div></div>' +
     '<div class="panel"><h2>Evolución (últimos 30 días)</h2><div id="grafica"></div></div>' +
+    '<div class="panel"><h2>Actividad reciente</h2><div id="actividad"></div></div>' +
     '<div class="panel"><h2>Miembros</h2>' +
       '<div class="controls">' +
         '<input type="search" id="buscar" placeholder="Buscar por apodo…" autocomplete="off">' +
@@ -228,11 +245,14 @@ function pintarTabla() {
         '<tr>' +
           '<td class="nombre">' + escapar(m.nombre) + '</td>' +
           '<td><span class="tag t-' + m.estado + '">' + ETIQUETAS[m.estado] + '</span></td>' +
-          '<td>' + (m.ultimaVoz ? haceCuanto(m.ultimaVoz) : '<span class="muted">nunca registrada</span>') + '</td>' +
+          '<td>' + (m.ultimaVoz
+            ? fecha(m.ultimaVoz) + ' <span class="muted">(' + haceCuanto(m.ultimaVoz) + ')</span>'
+            : '<span class="muted">nunca registrada</span>') + '</td>' +
+          '<td class="muted">' + (m.sesiones || 0) + '</td>' +
           '<td class="muted">' + (fecha(m.desde) || '—') + '</td>' +
           '<td class="muted">' + m.plazo + 'd' + (m.plazoPropio ? ' *' : '') + '</td>' +
         '</tr>').join('')
-    : '<tr><td colspan="5" class="empty">Sin resultados.</td></tr>';
+    : '<tr><td colspan="6" class="empty">Sin resultados.</td></tr>';
 
   document.getElementById('contador').innerHTML =
     lista.length + ' de ' + s.miembros.length + ' miembros · <b>*</b> plazo propio por política de rol';
@@ -264,6 +284,7 @@ function pintar() {
       : '<p class="muted" style="margin:14px 0 0;font-size:13px">Sin políticas por rol. Se configuran con <code>/configurar rol</code>.</p>');
 
   document.getElementById('grafica').innerHTML = grafica(s.historico);
+  document.getElementById('actividad').innerHTML = actividad(s.actividad);
 
   pintarTabla();
 }

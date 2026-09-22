@@ -1,22 +1,32 @@
 const db = require('./index');
 
 const statements = {
+  // isJoin (0/1): solo suma al contador de sesiones en una entrada real a voz
+  // (vease events/voiceStateUpdate.js). Cambiar de canal o salir actualiza la
+  // fecha pero no cuenta como sesion nueva.
   upsertVoiceActivity: db.prepare(`
-    INSERT INTO voice_logs (user_id, guild_id, last_voice_activity, display_name)
-    VALUES (@userId, @guildId, @timestamp, @displayName)
+    INSERT INTO voice_logs (user_id, guild_id, last_voice_activity, display_name, session_count)
+    VALUES (@userId, @guildId, @timestamp, @displayName, @isJoin)
     ON CONFLICT (user_id, guild_id)
     DO UPDATE SET last_voice_activity = excluded.last_voice_activity,
-                  display_name        = excluded.display_name
+                  display_name        = excluded.display_name,
+                  session_count       = session_count + @isJoin
   `),
 
   getVoiceLog: db.prepare(`
-    SELECT last_voice_activity AS lastVoiceActivity
+    SELECT last_voice_activity AS lastVoiceActivity, session_count AS sessionCount
     FROM voice_logs
     WHERE user_id = @userId AND guild_id = @guildId
   `),
 
   getAllVoiceLogsForGuild: db.prepare(`
     SELECT user_id AS userId, last_voice_activity AS lastVoiceActivity
+    FROM voice_logs
+    WHERE guild_id = @guildId
+  `),
+
+  getSessionCounts: db.prepare(`
+    SELECT user_id AS userId, session_count AS sessionCount
     FROM voice_logs
     WHERE guild_id = @guildId
   `),
@@ -72,6 +82,12 @@ const statements = {
     WHERE guild_id = @guildId
   `),
 
+  getMemberDisplayName: db.prepare(`
+    SELECT display_name AS displayName
+    FROM members
+    WHERE guild_id = @guildId AND user_id = @userId
+  `),
+
   deleteMember: db.prepare(`
     DELETE FROM members WHERE user_id = @userId AND guild_id = @guildId
   `),
@@ -120,10 +136,31 @@ const statements = {
     INSERT INTO moderation_actions (user_id, guild_id, action, reason, created_at)
     VALUES (@userId, @guildId, @action, @reason, @timestamp)
   `),
+
+  getRecentModerationActions: db.prepare(`
+    SELECT user_id AS userId, action, reason, created_at AS createdAt
+    FROM moderation_actions
+    WHERE guild_id = @guildId
+    ORDER BY created_at DESC
+    LIMIT @limit
+  `),
+
+  insertCommandUsage: db.prepare(`
+    INSERT INTO command_log (guild_id, user_id, command, created_at)
+    VALUES (@guildId, @userId, @command, @timestamp)
+  `),
+
+  getRecentCommandUsage: db.prepare(`
+    SELECT user_id AS userId, command, created_at AS createdAt
+    FROM command_log
+    WHERE guild_id = @guildId
+    ORDER BY created_at DESC
+    LIMIT @limit
+  `),
 };
 
-function recordVoiceActivity(userId, guildId, displayName = null, timestamp = Date.now()) {
-  statements.upsertVoiceActivity.run({ userId, guildId, displayName, timestamp });
+function recordVoiceActivity(userId, guildId, displayName = null, timestamp = Date.now(), isJoin = false) {
+  statements.upsertVoiceActivity.run({ userId, guildId, displayName, timestamp, isJoin: isJoin ? 1 : 0 });
 }
 
 function getLastVoiceActivity(userId, guildId) {
@@ -134,6 +171,12 @@ function getLastVoiceActivity(userId, guildId) {
 function getVoiceLogsMap(guildId) {
   const rows = statements.getAllVoiceLogsForGuild.all({ guildId });
   return new Map(rows.map((row) => [row.userId, row.lastVoiceActivity]));
+}
+
+/** Solo el contador de sesiones, sin fechas individuales por sesion. */
+function getSessionCountsMap(guildId) {
+  const rows = statements.getSessionCounts.all({ guildId });
+  return new Map(rows.map((row) => [row.userId, row.sessionCount]));
 }
 
 function getInactiveRoleId(guildId) {
@@ -173,6 +216,11 @@ const refreshDisplayNames = db.transaction((entries, guildId) => {
 function getMembersFirstSeenMap(guildId) {
   const rows = statements.getAllMembersForGuild.all({ guildId });
   return new Map(rows.map((row) => [row.userId, row.firstSeen]));
+}
+
+/** Para mostrar quien es alguien en un log, aunque ya no este en el servidor. */
+function getMemberDisplayName(guildId, userId) {
+  return statements.getMemberDisplayName.get({ guildId, userId })?.displayName ?? null;
 }
 
 function forgetMember(userId, guildId) {
@@ -217,13 +265,26 @@ function getSnapshots(guildId, sinceDays = 30) {
 }
 
 function logModerationAction(userId, guildId, action, reason, timestamp = Date.now()) {
-  statements.insertModerationAction.run({ userId, guildId, action, reason, timestamp });
+  statements.insertModerationAction.run({ userId, guildId, action, reason: reason ?? null, timestamp });
+}
+
+function getRecentModerationActions(guildId, limit = 20) {
+  return statements.getRecentModerationActions.all({ guildId, limit });
+}
+
+function logCommandUsage(guildId, userId, command, timestamp = Date.now()) {
+  statements.insertCommandUsage.run({ guildId, userId, command, timestamp });
+}
+
+function getRecentCommandUsage(guildId, limit = 20) {
+  return statements.getRecentCommandUsage.all({ guildId, limit });
 }
 
 module.exports = {
   recordVoiceActivity,
   getLastVoiceActivity,
   getVoiceLogsMap,
+  getSessionCountsMap,
   getInactiveRoleId,
   setInactiveRoleId,
   getStoredInactiveDays,
@@ -236,6 +297,10 @@ module.exports = {
   recordMemberFirstSeen,
   refreshDisplayNames,
   getMembersFirstSeenMap,
+  getMemberDisplayName,
   forgetMember,
   logModerationAction,
+  getRecentModerationActions,
+  logCommandUsage,
+  getRecentCommandUsage,
 };

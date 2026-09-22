@@ -17,9 +17,24 @@ requiere herramienta de migraciones).
 | `guild_id` | TEXT | ID de Discord del servidor |
 | `last_voice_activity` | INTEGER | Timestamp en milisegundos (`Date.now()`) |
 | `display_name` | TEXT | Apodo en el servidor, **solo para poder identificar a alguien de un vistazo** |
+| `session_count` | INTEGER | Cuántas veces ha entrado a voz (ver más abajo) |
 
 `PRIMARY KEY (user_id, guild_id)`. Se actualiza con `UPSERT` en cada evento
 `voiceStateUpdate`, tanto al entrar como al salir de un canal.
+
+### Sobre `session_count`
+
+Un contador, no un historial: sube en cada entrada real a voz (transición desde
+"fuera de voz" a "en un canal"), pero **no guarda la fecha de cada sesión**,
+solo el total acumulado. Cambiar de canal o salir no suma.
+
+Es deliberado no guardar cada sesión con su fecha: el bot solo necesita saber
+si alguien está activo, no llevar un diario detallado de sus movimientos. Un
+número que sube da la misma información útil ("esta persona usa mucho la voz")
+sin el coste de privacidad de un registro completo por evento.
+
+El contador empieza en 0 al añadir esta columna: no cuenta sesiones anteriores
+a esta versión del bot, porque esa información nunca se guardó.
 
 > **Nota de migración**: esta columna se llamaba `last_voice_left` y solo
 > registraba salidas. `db/index.js` aplica un `ALTER TABLE RENAME COLUMN`
@@ -116,22 +131,49 @@ manual.
 
 ### `moderation_actions`
 
-Auditoría de acciones puntuales: las manuales de `/moderar-inactivos` y las
-retiradas automáticas de roles especiales (`strip_role`).
-
-El marcado/desmarcado de `@Inactivo` **no** se registra aquí: sería mucho ruido
-y su estado real siempre es consultable en Discord mirando quién tiene el rol.
-Retirar un rol de privilegio sí se registra, porque es una acción poco
-frecuente y con consecuencias para el usuario.
+Auditoría de todo lo que el bot hace sobre un miembro: tanto lo manual
+(`/moderar-inactivos`) como lo automático (marcar/desmarcar `@Inactivo`,
+retirar un rol especial).
 
 | Columna | Tipo | Descripción |
 |---|---|---|
 | `id` | INTEGER | Autoincremental |
 | `user_id` | TEXT | Miembro afectado |
 | `guild_id` | TEXT | Servidor |
-| `action` | TEXT | `role` \| `warning` \| `kick` \| `strip_role` |
-| `reason` | TEXT | Detalle opcional (p. ej. ID del rol asignado) |
+| `action` | TEXT | `mark_inactive` \| `unmark_inactive` \| `strip_role` \| `role` \| `warning` \| `kick` |
+| `reason` | TEXT | Detalle opcional: `sync` (pasada periódica), `voice_activity` (desmarcado inmediato), o el ID del rol afectado |
 | `created_at` | INTEGER | Timestamp en milisegundos |
+
+> **Cambio de criterio**: al principio del proyecto se decidió **no** registrar
+> el marcado/desmarcado normal de `@Inactivo` aquí, para no generar ruido. Con
+> el bot en uso real esa decisión resultó incómoda: una retirada de rol
+> especial (`strip_role`) afectó a 14 personas en un momento dado y nadie del
+> staff se enteró salvo consultando la base de datos a mano. Ahora **sí** se
+> registra cada `mark_inactive`/`unmark_inactive`, porque solo ocurre en una
+> transición real de estado (no en cada comprobación horaria), así que el
+> volumen sigue siendo bajo.
+
+Consultarlo desde la terminal: `docker compose exec -T bot node src/tools/auditoria.js acciones` (ver [OPERATION.md](OPERATION.md)). También aparece combinado con `command_log` en el panel web, sección "Actividad reciente".
+
+### `command_log`
+
+Quién ejecutó qué comando y cuándo. Solo administradores pueden usar los
+comandos (ver [COMMANDS.md](COMMANDS.md#quién-puede-usarlos)), así que esto es
+un registro de acciones de staff, no de miembros normales.
+
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `id` | INTEGER | Autoincremental |
+| `guild_id` | TEXT | Servidor |
+| `user_id` | TEXT | Quién lo ejecutó |
+| `command` | TEXT | Nombre del comando y subcomando, p. ej. `/configurar rol` |
+| `created_at` | INTEGER | Timestamp en milisegundos |
+
+**No guarda los parámetros** con los que se invocó el comando (a quién se le
+cambió el plazo, qué mensaje se puso, etc.), solo qué comando fue y quién lo
+usó. Se registra desde `events/interactionCreate.js`, en el único punto por el
+que pasan todos los comandos, así que cualquier comando nuevo queda registrado
+sin tener que acordarse.
 
 ## Limpieza de datos
 

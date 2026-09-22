@@ -11,4 +11,15 @@ function formatRelativeDays(timestamp) {
   return `hace ${days} dias`;
 }
 
-module.exports = { MS_DAY, daysAgo, formatRelativeDays };
+/** Fecha y hora exactas, en la zona horaria del servidor donde corre el bot. */
+function formatExact(timestamp) {
+  return new Date(timestamp).toLocaleString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+module.exports = { MS_DAY, daysAgo, formatRelativeDays, formatExact };

@@ -17,8 +17,13 @@ module.exports = {
     const member = newState.member ?? oldState.member;
     if (!member || member.user.bot) return;
 
+    // Una "sesion" es entrar a voz viniendo de fuera de voz. Cambiar de canal o
+    // salir actualiza la fecha de actividad, pero no cuenta como sesion nueva:
+    // el contador refleja cuantas veces ha entrado, no cuantos movimientos ha hecho.
+    const isJoin = !oldState.channelId && Boolean(newState.channelId);
+
     const guildId = (newState.guild ?? oldState.guild).id;
-    repository.recordVoiceActivity(member.id, guildId, member.displayName, Date.now());
+    repository.recordVoiceActivity(member.id, guildId, member.displayName, Date.now(), isJoin);
 
     try {
       await clearInactiveRole(member);

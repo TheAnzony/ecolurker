@@ -19,7 +19,7 @@ if (term) {
   const rows = db
     .prepare(
       `SELECT m.display_name AS nombre, m.user_id AS id, m.first_seen AS visto,
-              v.last_voice_activity AS voz
+              v.last_voice_activity AS voz, v.session_count AS sesiones
        FROM members m
        LEFT JOIN voice_logs v ON v.user_id = m.user_id AND v.guild_id = m.guild_id
        WHERE m.display_name LIKE ? COLLATE NOCASE
@@ -36,6 +36,7 @@ if (term) {
       console.log(`    id:            ${r.id}`);
       console.log(`    visto desde:   ${fecha(r.visto)}`);
       console.log(`    ultima voz:    ${r.voz ? fecha(r.voz) : 'nunca registrada'}`);
+      console.log(`    sesiones:      ${r.sesiones ?? 0}`);
       console.log('');
     }
   }

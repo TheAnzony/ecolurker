@@ -18,12 +18,14 @@ async function buildGuildSnapshot(guild) {
   const days = getInactiveDays(guild.id);
   const roleId = repository.getInactiveRoleId(guild.id);
   const role = roleId ? guild.roles.cache.get(roleId) : null;
+  const sesiones = repository.getSessionCountsMap(guild.id);
 
   const toRow = (entry, estado) => ({
     id: entry.member.id,
     nombre: entry.member.displayName,
     estado,
     ultimaVoz: entry.source === 'voice' ? entry.lastActivity : null,
+    sesiones: sesiones.get(entry.member.id) ?? 0,
     desde: entry.member.joinedTimestamp,
     plazo: entry.policy.days,
     plazoPropio: Boolean(entry.policy.roleId),
@@ -69,8 +71,45 @@ async function buildGuildSnapshot(guild) {
     miembros,
     politicas,
     historico: repository.getSnapshots(guild.id, 30),
+    actividad: buildActivityLog(guild),
     generadoEn: Date.now(),
   };
+}
+
+const ETIQUETAS_ACCION = {
+  mark_inactive: 'marcó @Inactivo a',
+  unmark_inactive: 'desmarcó @Inactivo a',
+  strip_role: 'retiró un rol especial a',
+  role: 'asignó un rol a',
+  warning: 'avisó por MD a',
+  kick: 'expulsó a',
+};
+
+/** Nombre a mostrar para un ID: primero la cache en vivo, si no la ultima guardada. */
+function resolverNombre(guild, userId) {
+  return guild.members.cache.get(userId)?.displayName ?? repository.getMemberDisplayName(guild.id, userId) ?? userId;
+}
+
+/**
+ * Mezcla comandos usados y acciones del bot en una sola linea de tiempo, para
+ * el panel "Actividad reciente". Cada fuente vive en su propia tabla
+ * (command_log / moderation_actions) porque son datos de naturaleza distinta;
+ * aqui solo se combinan para mostrarlos juntos.
+ */
+function buildActivityLog(guild, limit = 20) {
+  const comandos = repository.getRecentCommandUsage(guild.id, limit).map((r) => ({
+    cuando: r.createdAt,
+    texto: `${resolverNombre(guild, r.userId)} ejecutó ${r.command}`,
+    tipo: 'comando',
+  }));
+
+  const acciones = repository.getRecentModerationActions(guild.id, limit).map((r) => ({
+    cuando: r.createdAt,
+    texto: `El bot ${ETIQUETAS_ACCION[r.action] || r.action} ${resolverNombre(guild, r.userId)}`,
+    tipo: 'accion',
+  }));
+
+  return [...comandos, ...acciones].sort((a, b) => b.cuando - a.cuando).slice(0, limit);
 }
 
 async function buildPayload(client) {

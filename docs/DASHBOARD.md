@@ -20,9 +20,20 @@ bot y se levanta solo al iniciar sesión en Discord.
 - **Configuración vigente**: plazo, cada cuánto revisa, rol usado, si las
   expulsiones están activadas y las políticas por rol que haya.
 - **Gráfica de evolución** de los últimos 30 días.
-- **Tabla de miembros** con apodo, estado, última actividad de voz, antigüedad
-  en el servidor y el plazo que se le aplica. Ordenable por cualquier columna
-  (clic en la cabecera) y con buscador por apodo y filtro por estado.
+- **Actividad reciente**: los últimos comandos ejecutados (quién y cuándo) y
+  las últimas acciones automáticas del bot (marcar/desmarcar `@Inactivo`,
+  retirar un rol especial), mezclados en una sola línea de tiempo. Ver
+  [DATABASE.md](DATABASE.md#command_log) y
+  [DATABASE.md](DATABASE.md#moderation_actions).
+- **Tabla de miembros** con apodo, estado, última actividad de voz (fecha y
+  hora exactas, con "hace cuánto" al lado), número de sesiones de voz,
+  antigüedad en el servidor y el plazo que se le aplica. Ordenable por
+  cualquier columna (clic en la cabecera) y con buscador por apodo y filtro por
+  estado.
+
+> La columna **Sesiones** cuenta veces que ha entrado a voz, no sesiones con
+> fecha individual: empieza en 0 para todo el mundo al desplegar esta versión,
+> porque ese dato no se guardaba antes. Sube a partir de ahora.
 
 Se refresca solo cada 60 segundos.
 

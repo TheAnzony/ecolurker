@@ -119,11 +119,12 @@ días.
   - `dias` (opcional, entero ≥ 1): umbral puntual. Si se omite, usa el
     configurado en el servidor con `/configurar`.
 - **Salida**: embed con hasta 40 miembros ordenados de más a menos inactivo,
-  cada uno con hace cuánto fue su última actividad de voz. Quien aparezca
-  como _sin actividad de voz registrada_ no tiene ninguna fila en
-  `voice_logs`: el bot nunca lo ha visto en voz, y por política eso cuenta
-  como inactivo. Al pie se resume cuántos miembros tienen actividad reciente
-  y cuántos están en período de gracia por llevar poco en el servidor.
+  cada uno con la fecha y hora exactas de su última actividad de voz (y, entre
+  paréntesis, hace cuánto fue). Quien aparezca como _sin actividad de voz
+  registrada_ no tiene ninguna fila en `voice_logs`: el bot nunca lo ha visto
+  en voz, y por política eso cuenta como inactivo. Al pie se resume cuántos
+  miembros tienen actividad reciente y cuántos están en período de gracia por
+  llevar poco en el servidor.
 
 Ejemplo:
 

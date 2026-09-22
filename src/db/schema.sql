@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS voice_logs (
   guild_id            TEXT NOT NULL,
   last_voice_activity INTEGER NOT NULL,
   display_name        TEXT,   -- solo para poder identificar al usuario a simple vista
+  session_count       INTEGER NOT NULL DEFAULT 0,  -- veces que ha entrado a voz, sin fechas individuales
   PRIMARY KEY (user_id, guild_id)
 );
 
@@ -52,7 +53,9 @@ CREATE TABLE IF NOT EXISTS stats_snapshots (
 
 CREATE INDEX IF NOT EXISTS idx_snapshots_guild ON stats_snapshots (guild_id, taken_at);
 
--- Historial de acciones de moderacion aplicadas por /moderar-inactivos
+-- Historial de acciones sobre un miembro: tanto manuales (/moderar-inactivos)
+-- como automaticas (marcado/desmarcado de @Inactivo, retirada de rol especial).
+-- action: 'mark_inactive' | 'unmark_inactive' | 'strip_role' | 'role' | 'warning' | 'kick'
 CREATE TABLE IF NOT EXISTS moderation_actions (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id    TEXT NOT NULL,
@@ -62,5 +65,17 @@ CREATE TABLE IF NOT EXISTS moderation_actions (
   created_at INTEGER NOT NULL
 );
 
+-- Uso de los slash commands: quien ejecuto que comando y cuando. No guarda los
+-- parametros con los que se invoco, solo el nombre del comando (y subcomando).
+CREATE TABLE IF NOT EXISTS command_log (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id   TEXT NOT NULL,
+  user_id    TEXT NOT NULL,
+  command    TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_voice_logs_guild ON voice_logs (guild_id);
 CREATE INDEX IF NOT EXISTS idx_members_guild ON members (guild_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_actions_guild ON moderation_actions (guild_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_command_log_guild ON command_log (guild_id, created_at);

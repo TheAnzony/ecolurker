@@ -30,8 +30,13 @@ La imagen y el contenedor Docker se llaman `ecolurker`, igual que el bot.
 - **Se autoconfigura en cualquier servidor.** Al añadirlo a uno nuevo, crea el
   rol `Inactivo`, registra a los miembros y aplica el marcado inicial él solo.
   No hay que configurar `INACTIVE_ROLE_ID` ni ejecutar ningún comando.
-- **Panel web** en `http://localhost:3000` con la lista ordenable, buscador y
-  la evolución del servidor. Solo lectura y solo accesible en local.
+- **Panel web** en `http://localhost:3000` con la lista ordenable, buscador,
+  la evolución del servidor y la actividad reciente. Solo lectura y solo
+  accesible en local.
+- **Registro de auditoría.** Queda constancia de qué comando ejecutó cada
+  administrador y cuándo, y de cada acción del bot (marcar/desmarcar
+  `@Inactivo`, retirar un rol especial). Consultable en el panel web o desde
+  la terminal.
 
 ## Stack
 
@@ -99,7 +104,7 @@ src/
   services/     Lógica de negocio (inactividad, rol, sincronización, moderación)
   db/           Conexión SQLite, esquema y capa de acceso a datos
   dashboard/    Panel web de solo lectura (servidor + página)
-  tools/        Utilidades de terminal (consulta.js, backup.js)
+  tools/        Utilidades de terminal (consulta.js, auditoria.js, backup.js)
   config.js     Lectura y validación de variables de entorno
   index.js      Punto de entrada del bot
   deploy-commands.js   Script para registrar los slash commands en Discord

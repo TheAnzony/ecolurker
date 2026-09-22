@@ -48,6 +48,12 @@ if (policyCols.length > 0 && !policyCols.includes('recovery_message')) {
   logger.info('Migracion aplicada: role_policies.recovery_message');
 }
 
+// Migracion: contador de sesiones de voz (sin fechas individuales, solo un total)
+if (!voiceCols.includes('session_count')) {
+  db.exec('ALTER TABLE voice_logs ADD COLUMN session_count INTEGER NOT NULL DEFAULT 0');
+  logger.info('Migracion aplicada: voice_logs.session_count');
+}
+
 logger.info(`Base de datos lista en ${config.dbPath}`);
 
 module.exports = db;

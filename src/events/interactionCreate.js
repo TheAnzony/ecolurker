@@ -1,5 +1,18 @@
 const { Events, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const logger = require('../utils/logger');
+const repository = require('../db/repository');
+
+/** "/comando subcomando", sin parametros: solo para saber quien uso que y cuando. */
+function describeCommand(interaction) {
+  let text = `/${interaction.commandName}`;
+  try {
+    const sub = interaction.options.getSubcommand(false);
+    if (sub) text += ` ${sub}`;
+  } catch {
+    // Comandos sin estructura de subcomandos: no hay nada que aniadir.
+  }
+  return text;
+}
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -40,6 +53,8 @@ module.exports = {
       });
       return;
     }
+
+    repository.logCommandUsage(interaction.guildId, interaction.user.id, describeCommand(interaction));
 
     try {
       await command.execute(interaction);

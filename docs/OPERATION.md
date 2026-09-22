@@ -142,11 +142,31 @@ Buscar a alguien por su apodo (no distingue mayúsculas, busca por partes):
 docker compose exec -T bot node src/tools/consulta.js fernando
 ```
 
-Devuelve su ID, desde cuándo lo conoce el bot y su última actividad de voz.
+Devuelve su ID, desde cuándo lo conoce el bot, su última actividad de voz y
+cuántas sesiones lleva.
 
 > Existe esta herramienta en vez de documentar comandos SQL sueltos porque
 > escribir SQL con comillas anidadas en PowerShell falla constantemente por el
 > escapado.
+
+## Ver el registro de actividad (comandos y acciones del bot)
+
+Quién ha usado qué comando y cuándo, más las acciones automáticas del bot
+(marcar/desmarcar `@Inactivo`, retirar un rol especial):
+
+```bash
+docker compose exec -T bot node src/tools/auditoria.js
+```
+
+Solo una de las dos partes, y con más de 20 resultados:
+
+```bash
+docker compose exec -T bot node src/tools/auditoria.js comandos 50
+docker compose exec -T bot node src/tools/auditoria.js acciones 50
+```
+
+Lo mismo se ve mezclado en orden cronológico en el panel web, sección
+"Actividad reciente".
 
 ## Backups
 

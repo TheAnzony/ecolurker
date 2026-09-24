@@ -45,32 +45,58 @@ presencia y estado del micrófono.
 
 ## Decisiones tomadas
 
-### El canal AFK cuenta como tiempo muteado
+### El canal AFK va completamente aparte
 
-Quien está en el canal AFK del servidor no participa, aunque tenga el micro
-abierto. Esas sesiones se marcan con `is_afk` y su tiempo cuenta como muteado.
+**Regla única: el tiempo en el canal AFK solo cuenta para dos cosas.**
 
-La marca se guarda **aparte** a propósito: permite decidir al construir los
-rankings si esas horas suman al total de voz o no. Sin ella, quien se deje el
-PC encendido toda la noche dominaría el ranking de horas sin haber hablado con
-nadie, y no habría forma de corregirlo sin volver a capturar los datos.
+1. **Tiempo en AFK** — su propia categoría.
+2. **Tiempo total en el servidor** — la presencia total, esté donde esté.
 
-Además, esa marca da gratis la categoría de **tiempo total en el canal AFK**,
-sin capturar nada adicional:
+Queda **fuera de todo lo demás**: tiempo de voz real, sesión más larga, racha
+de días, mes más activo, franja horaria, canal favorito, entradas relámpago,
+tiempo muteado o ensordecido, dúo del año, más sociable, horas en solitario,
+y abrir o cerrar canal.
+
+El motivo es que ese tiempo **no es voluntario**: casi siempre viene de que
+Discord aparta a alguien por inactividad. Mezclar tiempo involuntario con
+estadísticas de comportamiento las vacía de sentido — el *dúo del año* se lo
+llevarían dos personas dormidas en el AFK, y *el que abre el bar* quien se
+quedó quieto.
+
+Una regla de una línea, además, es mucho más difícil de romper que una tabla
+de excepciones por categoría, donde cada estadística nueva obliga a acordarse.
+
+Solo hay que medir **dos** cantidades; la tercera es su suma:
+
+```
+tiempo total en el servidor = tiempo de voz real + tiempo en AFK
+```
+
+Se cumple exactamente porque `is_afk` solo vale 0 o 1: las dos consultas
+reparten todas las sesiones sin solaparse ni dejarse ninguna.
 
 ```sql
+-- Tiempo de voz real (el ranking principal)
+SELECT SUM(ended_at - started_at - gap_ms) FROM voice_sessions
+WHERE user_id = ? AND is_afk = 0 AND ended_at IS NOT NULL
+
+-- Tiempo en AFK (su categoría)
 SELECT SUM(ended_at - started_at - gap_ms) FROM voice_sessions
 WHERE user_id = ? AND is_afk = 1 AND ended_at IS NOT NULL
 ```
 
-**Que Discord te aparte al AFK no cuenta como "abrir" ni "cerrar" el canal.**
-Ser movido por inactividad no es una decisión propia, y sin esta excepción el
-premio al *que abre el bar* se lo llevaría justo quien se quedó quieto. Lo
-mismo al salir: vaciar el AFK no es "apagar la luz".
+Además queda bien al presentarlo: *"40 horas en el servidor — 32 hablando y 8
+tirado en el AFK"*.
 
-> **Ojo al calcular las categorías sociales**: dos personas apartadas al AFK
-> durante horas acumularían tiempo de coincidencia sin haberse hablado. El dúo
-> del año, el más sociable y las horas en solitario deben filtrar `is_afk = 0`.
+### El estado del micro se guarda tal cual, también en el AFK
+
+Durante un tiempo el bot forzaba `muted = true` en las sesiones de AFK. Se
+quitó: eso metía una interpretación dentro del dato. Como el AFK ya no entra
+en las estadísticas de muteado, no hace falta falsearlo, y guardar la realidad
+mantiene la decisión reversible.
+
+Es el mismo criterio que hizo útil a `is_afk`: **capturar lo que pasa, decidir
+al calcular**.
 
 ### Las sesiones interrumpidas se conservan, no se pierden
 

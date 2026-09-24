@@ -24,12 +24,14 @@ function esCanalAfk(guild, channelId) {
  * Estado "de micro" de un miembro. Mutearse a uno mismo y que te mutee un
  * moderador cuentan igual: a efectos de estadistica, no estaba hablando.
  *
- * En el canal AFK se considera muteado siempre, tal y como se decidio: quien
- * esta ahi no participa aunque tenga el micro abierto.
+ * Se guarda el estado REAL tambien en el canal AFK. El tiempo en AFK se trata
+ * como una categoria aparte y no entra en las estadisticas de muteado, asi que
+ * no hace falta falsearlo aqui: guardar la realidad mantiene la decision
+ * reversible.
  */
-function leerEstado(voiceState, enAfk) {
+function leerEstado(voiceState) {
   return {
-    muted: enAfk || voiceState.selfMute || voiceState.serverMute || false,
+    muted: voiceState.selfMute || voiceState.serverMute || false,
     deafened: voiceState.selfDeaf || voiceState.serverDeaf || false,
     video: voiceState.selfVideo || false,
     streaming: voiceState.streaming || false,
@@ -60,7 +62,7 @@ function abrirSesion(member, voiceState, { fromMove = false, fromRestart = false
     fromRestart,
     // Al entrar, el canal estaba vacio si el unico humano es el que acaba de entrar
     joinedEmpty: humanosEn(channel, member.id) === 0,
-    ...leerEstado(voiceState, enAfk),
+    ...leerEstado(voiceState),
   });
 }
 
@@ -114,8 +116,7 @@ function handleVoiceStateUpdate(oldState, newState) {
   const sesion = recapRepository.getOpenSession(guildId, member.id);
   if (!sesion) return;
 
-  const enAfk = esCanalAfk(member.guild, ahora);
-  recapRepository.applyStateChange(sesion, leerEstado(newState, enAfk), Date.now());
+  recapRepository.applyStateChange(sesion, leerEstado(newState), Date.now());
 }
 
 /**
@@ -162,8 +163,6 @@ function initializeTracking(client) {
       const member = voiceState.member;
       if (!member || member.user.bot || !voiceState.channelId) continue;
 
-      const enAfk = esCanalAfk(guild, voiceState.channelId);
-
       // Si seguia en el mismo canal y el bot volvio pronto, se entiende que no
       // se fue: se continua su sesion anterior en la misma fila.
       const retomada = recapRepository.resumeSession({
@@ -171,7 +170,7 @@ function initializeTracking(client) {
         userId: member.id,
         channelId: voiceState.channelId,
         ventanaMs: VENTANA_REANUDACION_MS,
-        estado: leerEstado(voiceState, enAfk),
+        estado: leerEstado(voiceState),
       });
 
       if (retomada) {

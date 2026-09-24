@@ -7,18 +7,16 @@ forma automática, sin expulsiones. Ideas para siguientes iteraciones:
 
 La captura de sesiones ya funciona (ver [RECAP.md](RECAP.md)). Falta:
 
-**Cálculo de estadísticas** — horas totales, sesión más larga, racha de días,
-mes más activo, franja horaria, tiempo muteado/ensordecido/con cámara,
-**tiempo total en el canal AFK**, entradas relámpago, dúo del año (asimétrico:
-el tuyo puede no tener el mismo que tú), persona con más gente distinta, más
-horas en solitario, quién abre y quién cierra los canales, canal favorito, y
-los totales del servidor.
+**Cálculo de estadísticas** — horas de voz reales, tiempo total en el servidor,
+tiempo en AFK, sesión más larga, racha de días, mes más activo, franja horaria,
+tiempo muteado/ensordecido/con cámara, entradas relámpago, dúo del año
+(asimétrico: el tuyo puede no tener el mismo que tú), persona con más gente
+distinta, más horas en solitario, quién abre y quién cierra los canales, canal
+favorito, y los totales del servidor.
 
-> **El AFK contamina las categorías sociales.** Dos personas apartadas al canal
-> AFK durante horas acumularían "tiempo juntas" sin haberse dirigido la
-> palabra, y quien se quede solo ahí ganaría *el ermitaño* sin merecerlo. Al
-> calcular el dúo del año, el más sociable y las horas en solitario hay que
-> filtrar `is_afk = 0`. El tiempo en AFK va en su propia categoría.
+> **El AFK va aparte en todos los cálculos**: solo cuenta para su propia
+> categoría y para el tiempo total en el servidor. Todo lo demás filtra
+> `is_afk = 0`. Ver [RECAP.md](RECAP.md#el-canal-afk-va-completamente-aparte).
 
 **Comando `/recap [año]`** — el primero que podrá usar cualquier miembro, no
 solo administradores. Requiere abrir una excepción explícita en el guardia

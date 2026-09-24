@@ -155,6 +155,30 @@ retirar un rol especial).
 
 Consultarlo desde la terminal: `docker compose exec -T bot node src/tools/auditoria.js acciones` (ver [OPERATION.md](OPERATION.md)). También aparece combinado con `command_log` en el panel web, sección "Actividad reciente".
 
+### `voice_sessions`
+
+Una fila por estancia en un canal de voz. Es la base del [recap
+anual](RECAP.md) y la única tabla con historial detallado: el resto del bot
+guarda solo estado actual.
+
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `id` | INTEGER | Autoincremental |
+| `guild_id` / `user_id` / `channel_id` | TEXT | Quién, dónde |
+| `channel_name` | TEXT | Copia del nombre: los canales se renombran y se borran |
+| `started_at` / `ended_at` | INTEGER | Timestamps. `ended_at NULL` = sesión abierta |
+| `is_afk` | INTEGER | Sesión en el canal AFK del servidor |
+| `from_move` | INTEGER | Empezó por cambio de canal, no por entrada real |
+| `joined_empty` / `left_empty` | INTEGER | El canal estaba/quedó vacío |
+| `muted_ms` / `deafened_ms` / `video_ms` / `streaming_ms` | INTEGER | Tiempo acumulado en cada estado dentro de esta sesión |
+| `muted_since` / `deafened_since` / `video_since` / `streaming_since` | INTEGER | Marca de cuándo empezó el estado actual. Se vuelcan a los acumuladores al cerrar |
+
+Unas 18.000 filas al año con el ritmo actual (~50 entradas diarias):
+irrelevante para SQLite.
+
+Los pares de "dúo del año" **no se guardan**: se calculan cuando se pide el
+recap, cruzando solapes de sesiones en el mismo canal.
+
 ### `command_log`
 
 Quién ejecutó qué comando y cuándo. Solo administradores pueden usar los
@@ -177,11 +201,26 @@ sin tener que acordarse.
 
 ## Limpieza de datos
 
-Cuando un miembro abandona el servidor (`guildMemberRemove`), sus filas en
-`voice_logs` y `members` se eliminan (`repository.forgetMember`) para no
-acumular datos de usuarios que ya no están. El historial en
-`moderation_actions` **no** se borra: es un log de auditoría y debe
-sobrevivir a la salida del usuario.
+**El bot no borra historial por su cuenta.** Ni cuando alguien abandona el
+servidor, ni cuando se le expulsa.
+
+Antes sí lo hacía: `guildMemberRemove` borraba las filas de `voice_logs` y
+`members`. Se dejó de hacer al añadir el [recap](RECAP.md): borrar el historial
+de quien se va deja huecos en las estadísticas **de los demás** — si tu "dúo
+del año" abandona el servidor en noviembre, tus horas compartidas con él
+desaparecerían.
+
+La purga es manual y deliberada:
+
+```bash
+docker compose exec -T bot node src/tools/purgar.js <id-de-usuario>
+```
+
+Simula por defecto; requiere `--confirmar` para borrar de verdad. Elimina sus
+sesiones de voz y sus datos de inactividad, pero **conserva
+`moderation_actions` y `command_log`**: son registros de auditoría, no de
+actividad personal, y deben sobrevivir para que quede constancia de lo que
+hizo el bot.
 
 ## Backups
 

@@ -8,6 +8,11 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      # Sin esto el contenedor corre en UTC y las estadisticas por franja
+      # horaria, dia y mes saldrian desplazadas 1-2h respecto a la hora real
+      # en España. Europe/Madrid gestiona solo el cambio de hora.
+      - TZ=Europe/Madrid
     volumes:
       - ./data:/app/data
     ports:

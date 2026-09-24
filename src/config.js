@@ -26,6 +26,9 @@ module.exports = {
   // 127.0.0.1 del host, asi que no queda expuesto a la red.
   dashboardEnabled: process.env.DASHBOARD_ENABLED !== 'false',
   dashboardPort: Number(process.env.DASHBOARD_PORT) || 3000,
+  // Captura de sesiones de voz para el recap anual. Independiente del sistema
+  // de inactividad: apagarlo no afecta al marcado de roles.
+  recapEnabled: process.env.RECAP_ENABLED !== 'false',
   inactiveWarningMessage:
     process.env.INACTIVE_WARNING_MESSAGE ||
     'No se ha detectado actividad tuya en los canales de voz del servidor durante un tiempo prolongado.',

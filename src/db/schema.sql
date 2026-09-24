@@ -65,6 +65,50 @@ CREATE TABLE IF NOT EXISTS moderation_actions (
   created_at INTEGER NOT NULL
 );
 
+-- ============================================================================
+-- MODULO RECAP (independiente del sistema de inactividad, ver docs/RECAP.md)
+-- ============================================================================
+
+-- Una fila por estancia en un canal de voz. Cambiar de canal cierra la sesion
+-- y abre otra, porque las estadisticas por canal y el "duo del año" necesitan
+-- saber quien coincidio con quien EN EL MISMO canal.
+--
+-- ended_at NULL = sesion abierta. Al arrancar el bot se descartan las que
+-- quedaron abiertas de una ejecucion anterior: si el bot se cayo no hay forma
+-- honesta de saber cuando salio esa persona, y se prefiere perder el dato
+-- antes que inventarlo.
+CREATE TABLE IF NOT EXISTS voice_sessions (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id        TEXT NOT NULL,
+  user_id         TEXT NOT NULL,
+  channel_id      TEXT NOT NULL,
+  channel_name    TEXT,            -- copia del nombre: los canales se renombran y borran
+  started_at      INTEGER NOT NULL,
+  ended_at        INTEGER,
+
+  is_afk          INTEGER NOT NULL DEFAULT 0,  -- sesion en el canal AFK del servidor
+  from_move       INTEGER NOT NULL DEFAULT 0,  -- empezo por cambio de canal, no por entrada real
+  joined_empty    INTEGER NOT NULL DEFAULT 0,  -- el canal estaba vacio al entrar
+  left_empty      INTEGER NOT NULL DEFAULT 0,  -- el canal quedo vacio al salir
+
+  -- Tiempo acumulado en cada estado DENTRO de esta sesion
+  muted_ms        INTEGER NOT NULL DEFAULT 0,
+  deafened_ms     INTEGER NOT NULL DEFAULT 0,
+  video_ms        INTEGER NOT NULL DEFAULT 0,
+  streaming_ms    INTEGER NOT NULL DEFAULT 0,
+
+  -- Marca de cuando empezo el estado actual (NULL = no esta en ese estado).
+  -- Al cerrar la sesion se vuelcan a los acumuladores de arriba.
+  muted_since     INTEGER,
+  deafened_since  INTEGER,
+  video_since     INTEGER,
+  streaming_since INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON voice_sessions (guild_id, user_id, started_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_channel ON voice_sessions (guild_id, channel_id, started_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_open ON voice_sessions (guild_id, ended_at);
+
 -- Uso de los slash commands: quien ejecuto que comando y cuando. No guarda los
 -- parametros con los que se invoco, solo el nombre del comando (y subcomando).
 CREATE TABLE IF NOT EXISTS command_log (

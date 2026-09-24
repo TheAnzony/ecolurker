@@ -52,7 +52,9 @@ async function kickMembers(entries, guild) {
     try {
       await member.kick('Inactividad prolongada en canales de voz');
       repository.logModerationAction(member.id, guild.id, 'kick', null);
-      repository.forgetMember(member.id, guild.id);
+      // No se borra su historial: la regla del bot es que los datos solo se
+      // purgan manualmente. Borrarlos aqui dejaria huecos en las estadisticas
+      // del recap de los demas (su "duo del año" se evaporaria).
       results.ok += 1;
     } catch (err) {
       logger.warn(`No se pudo expulsar a ${member.id}:`, err.message);

@@ -83,6 +83,7 @@ archivos ni reiniciar el contenedor.
 | [docs/DATABASE.md](docs/DATABASE.md) | Esquema SQLite, tablas y su ciclo de vida |
 | [docs/COMMANDS.md](docs/COMMANDS.md) | Referencia de los slash commands |
 | [docs/DASHBOARD.md](docs/DASHBOARD.md) | Panel web de solo lectura: qué muestra y cómo acceder |
+| [docs/RECAP.md](docs/RECAP.md) | Módulo de recap anual: qué registra, por qué va aparte y cómo apagarlo |
 | [docs/OPERATION.md](docs/OPERATION.md) | Operación diaria: ajustar el umbral, revertir, backups, troubleshooting |
 | [docs/DEPLOY.md](docs/DEPLOY.md) | Migrar el bot a un VPS para tenerlo 24/7 |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Casos pendientes y mejoras futuras |
@@ -132,9 +133,10 @@ src/
   events/       Listeners de discord.js (voiceStateUpdate, ready, ...)
   handlers/     Carga dinámica de comandos y eventos
   services/     Lógica de negocio (inactividad, rol, sincronización, moderación)
+    recap/      Módulo de recap anual, aislado del resto
   db/           Conexión SQLite, esquema y capa de acceso a datos
   dashboard/    Panel web de solo lectura (servidor + página)
-  tools/        Utilidades de terminal (consulta.js, auditoria.js, backup.js)
+  tools/        Utilidades de terminal (consulta.js, auditoria.js, backup.js, purgar.js)
   config.js     Lectura y validación de variables de entorno
   index.js      Punto de entrada del bot
   deploy-commands.js   Script para registrar los slash commands en Discord

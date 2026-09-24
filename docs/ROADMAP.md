@@ -3,6 +3,27 @@
 Estado actual: en producción, marcando y desmarcando el rol `@Inactivo` de
 forma automática, sin expulsiones. Ideas para siguientes iteraciones:
 
+## Recap anual: fases pendientes
+
+La captura de sesiones ya funciona (ver [RECAP.md](RECAP.md)). Falta:
+
+**Cálculo de estadísticas** — horas totales, sesión más larga, racha de días,
+mes más activo, franja horaria, tiempo muteado/ensordecido/con cámara,
+entradas relámpago, dúo del año (asimétrico: el tuyo puede no tener el mismo
+que tú), persona con más gente distinta, más horas en solitario, quién abre y
+quién cierra los canales, canal favorito, y los totales del servidor.
+
+**Comando `/recap [año]`** — el primero que podrá usar cualquier miembro, no
+solo administradores. Requiere abrir una excepción explícita en el guardia
+centralizado de `events/interactionCreate.js`, no desactivarlo. Se activa y
+desactiva con un comando de administrador, y arranca apagado.
+
+**Comando de anuncio** — publica en el canal donde se ejecuta que el recap ya
+está disponible y que se consulta con `/recap`. Se descartó el envío masivo
+por MD: mandar 126 mensajes directos es el patrón que Discord marca como spam.
+
+**Panel web del recap** — página propia, separada del panel de inactividad.
+
 ## Período de gracia independiente del umbral
 
 Hoy el margen que se da a un recién llegado es exactamente el mismo que el

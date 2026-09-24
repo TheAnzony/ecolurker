@@ -55,6 +55,23 @@ rankings si esas horas suman al total de voz o no. Sin ella, quien se deje el
 PC encendido toda la noche dominaría el ranking de horas sin haber hablado con
 nadie, y no habría forma de corregirlo sin volver a capturar los datos.
 
+Además, esa marca da gratis la categoría de **tiempo total en el canal AFK**,
+sin capturar nada adicional:
+
+```sql
+SELECT SUM(ended_at - started_at - gap_ms) FROM voice_sessions
+WHERE user_id = ? AND is_afk = 1 AND ended_at IS NOT NULL
+```
+
+**Que Discord te aparte al AFK no cuenta como "abrir" ni "cerrar" el canal.**
+Ser movido por inactividad no es una decisión propia, y sin esta excepción el
+premio al *que abre el bar* se lo llevaría justo quien se quedó quieto. Lo
+mismo al salir: vaciar el AFK no es "apagar la luz".
+
+> **Ojo al calcular las categorías sociales**: dos personas apartadas al AFK
+> durante horas acumularían tiempo de coincidencia sin haberse hablado. El dúo
+> del año, el más sociable y las horas en solitario deben filtrar `is_afk = 0`.
+
 ### Las sesiones interrumpidas se conservan, no se pierden
 
 Si el bot se para con gente dentro de un canal, esas sesiones quedan abiertas

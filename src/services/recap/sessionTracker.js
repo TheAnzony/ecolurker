@@ -68,8 +68,10 @@ function cerrarSesion(guildId, userId, canalQueDeja, userIdQueSale) {
   const sesion = recapRepository.getOpenSession(guildId, userId);
   if (!sesion) return;
 
-  // Al salir, deja el canal vacio si no queda ningun humano aparte de el mismo
-  const dejaVacio = humanosEn(canalQueDeja, userIdQueSale) === 0;
+  // Al salir, deja el canal vacio si no queda ningun humano aparte de el mismo.
+  // Vaciar el canal AFK no cuenta: nadie "apaga la luz" de un sitio al que te
+  // manda Discord por estar quieto.
+  const dejaVacio = sesion.is_afk ? false : humanosEn(canalQueDeja, userIdQueSale) === 0;
   recapRepository.closeSession(sesion, Date.now(), dejaVacio);
 }
 

@@ -125,9 +125,12 @@ function openSession(data) {
     isAfk: data.isAfk ? 1 : 0,
     fromMove: data.fromMove ? 1 : 0,
     fromRestart: data.fromRestart ? 1 : 0,
-    // Reanudar tras un reinicio no es "abrir el canal": esa persona ya estaba
-    // dentro, y acreditarselo falsearia la categoria de quien abre los canales.
-    joinedEmpty: data.joinedEmpty && !data.fromRestart ? 1 : 0,
+    // "Abrir el canal" solo cuenta si fue algo que hizo esa persona:
+    //   - Reanudar tras un reinicio no lo es: ya estaba dentro.
+    //   - Que Discord te aparte al canal AFK por inactividad tampoco: no es
+    //     una decision tuya, y coronaria como "el que abre el bar" justo a
+    //     quien se quedo quieto.
+    joinedEmpty: data.joinedEmpty && !data.fromRestart && !data.isAfk ? 1 : 0,
     // Si entra ya muteado (o en el canal AFK), el cronometro arranca al entrar
     mutedSince: data.muted ? now : null,
     deafenedSince: data.deafened ? now : null,

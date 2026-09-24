@@ -15,6 +15,12 @@ FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
+# tzdata es imprescindible, no un extra: Alpine no trae zonas horarias, y sin
+# ellas el `localtime` de SQLite se queda en UTC aunque TZ este definida. Node
+# no lo nota (lleva su propia base de zonas), asi que el fallo seria silencioso:
+# las estadisticas por hora y por mes saldrian desplazadas 1-2h.
+RUN apk add --no-cache tzdata
+
 RUN addgroup -S bot && adduser -S bot -G bot
 
 COPY --from=deps /app/node_modules ./node_modules

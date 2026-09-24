@@ -192,7 +192,15 @@ function initializeTracking(client) {
   recapRepository.recordHeartbeat();
   setInterval(() => {
     try {
-      recapRepository.recordHeartbeat();
+      const retroceso = recapRepository.recordHeartbeat();
+      // Un reloj que retrocede solo o falsea duraciones. Avisar permite saber
+      // que las sesiones de ese rato pueden no ser de fiar.
+      if (retroceso > 5000) {
+        logger.warn(
+          `El reloj del sistema ha retrocedido ${Math.round(retroceso / 1000)}s. ` +
+            'Las duraciones medidas en este rato pueden no ser exactas.'
+        );
+      }
     } catch (err) {
       logger.error('Fallo al escribir el latido:', err.message);
     }

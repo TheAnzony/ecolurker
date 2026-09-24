@@ -158,10 +158,15 @@ function flushTimers(session, at) {
 }
 
 function closeSession(session, endedAt, leftEmpty = false) {
-  const totals = flushTimers(session, endedAt);
+  // Una sesion no puede terminar antes de empezar. Pasa si el reloj del
+  // sistema salta hacia atras a mitad de sesion (NTP corrigiendo una hora
+  // desincronizada al arrancar el PC); sin esta guarda quedaria guardada una
+  // duracion negativa que restaria del ranking anual para siempre.
+  const cierre = Math.max(endedAt, session.started_at);
+  const totals = flushTimers(session, cierre);
   statements.closeSession.run({
     id: session.id,
-    endedAt,
+    endedAt: cierre,
     leftEmpty: leftEmpty ? 1 : 0,
     mutedMs: totals.mutedMs,
     deafenedMs: totals.deafenedMs,
@@ -231,8 +236,16 @@ function resumeSession({ guildId, userId, channelId, ventanaMs, estado, at = Dat
   return { id: previa.id, gapMs };
 }
 
+/**
+ * Devuelve cuanto ha retrocedido el reloj respecto al ultimo latido, o 0 si
+ * avanza con normalidad. Un valor grande delata un salto de reloj (tipicamente
+ * NTP corrigiendo la hora tras arrancar el PC) y avisa de que los datos de ese
+ * rato pueden no ser fiables.
+ */
 function recordHeartbeat(at = Date.now()) {
+  const previo = getLastHeartbeat();
   statements.setHeartbeat.run({ beatAt: at });
+  return previo && at < previo ? previo - at : 0;
 }
 
 function getLastHeartbeat() {

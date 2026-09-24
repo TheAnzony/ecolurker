@@ -60,9 +60,10 @@ archivos ni reiniciar el contenedor.
 - **Se autoconfigura en cualquier servidor.** Al añadirlo a uno nuevo, crea el
   rol `Inactivo`, registra a los miembros y aplica el marcado inicial él solo.
   No hay que configurar `INACTIVE_ROLE_ID` ni ejecutar ningún comando.
-- **Panel web** en `http://localhost:3000` con la lista ordenable, buscador,
-  la evolución del servidor y la actividad reciente. Solo lectura y solo
-  accesible en local.
+- **Panel web** en `http://localhost:3000` con dos pestañas: *Inactividad*
+  (lista ordenable, buscador, evolución del servidor y actividad reciente) y
+  *Recap* (rankings de horas de voz, AFK, tiempo muteado, canales más usados
+  y a qué horas se conecta la gente). Solo lectura y solo accesible en local.
 - **Registro de auditoría.** Queda constancia de qué comando ejecutó cada
   administrador y cuándo, y de cada acción del bot (marcar/desmarcar
   `@Inactivo`, retirar un rol especial). Consultable en el panel web o desde
@@ -135,7 +136,7 @@ src/
   services/     Lógica de negocio (inactividad, rol, sincronización, moderación)
     recap/      Módulo de recap anual, aislado del resto
   db/           Conexión SQLite, esquema y capa de acceso a datos
-  dashboard/    Panel web de solo lectura (servidor + página)
+  dashboard/    Panel web de solo lectura (dos páginas: inactividad y recap)
   tools/        Utilidades de terminal (consulta.js, auditoria.js, backup.js, purgar.js)
   config.js     Lectura y validación de variables de entorno
   index.js      Punto de entrada del bot

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ecolurker — Recap</title>
+<link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+<div class="wrap" id="app">
+  <p class="muted">Cargando…</p>
+</div>
+
+<script>
+const app = document.getElementById('app');
+let datos = null;
+let montado = false;
+
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function escapar(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+/** Duracion legible: "3h 20m", "45m", "12s". */
+function dur(ms) {
+  if (!ms || ms < 1000) return '0m';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.round((ms % 3600000) / 60000);
+  if (h === 0) return m + 'm';
+  return h + 'h' + (m ? ' ' + m + 'm' : '');
+}
+
+function fecha(ms) {
+  return new Date(ms).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+/** Ranking con barra proporcional al primero. */
+function rank(lista, vacio) {
+  if (!lista || lista.length === 0) return '<p class="empty">' + vacio + '</p>';
+  const max = lista[0].ms || 1;
+  return '<ul class="rank">' + lista.map((x, i) =>
+    '<li' + (i === 0 ? ' class="oro"' : '') + '>' +
+      '<span class="pos">' + (i + 1) + '.</span>' +
+      '<span class="quien">' + escapar(x.nombre) + '</span>' +
+      '<span class="barra" style="width:' + Math.round((x.ms / max) * 60) + 'px"></span>' +
+      '<span class="valor">' + dur(x.ms) + '</span>' +
+    '</li>').join('') + '</ul>';
+}
+
+function franjaHoraria(horas) {
+  const max = Math.max(...horas, 1);
+  const total = horas.reduce((a, b) => a + b, 0);
+  if (total === 0) return '<p class="empty">Todavía no hay entradas registradas.</p>';
+  const pico = horas.indexOf(max);
+  return '<div class="barras">' +
+      horas.map((n, h) => '<div style="height:' + Math.max(2, (n / max) * 100) + '%" title="' + h + ':00 — ' + n + ' entradas"></div>').join('') +
+    '</div>' +
+    '<div class="horas">' + horas.map((_, h) => '<span>' + (h % 6 === 0 ? h : '') + '</span>').join('') + '</div>' +
+    '<p class="muted" style="font-size:13px;margin:8px 0 0">Hora punta: <b>' + pico + ':00</b> · ' + total + ' entradas en total</p>';
+}
+
+function porMes(meses) {
+  const max = Math.max(...meses, 1);
+  if (meses.every(m => !m)) return '<p class="empty">Todavía no hay datos suficientes.</p>';
+  return '<div class="barras">' +
+      meses.map((ms, i) => '<div style="height:' + Math.max(2, (ms / max) * 100) + '%" title="' + MESES[i] + ' — ' + dur(ms) + '"></div>').join('') +
+    '</div>' +
+    '<div class="horas">' + MESES.map(m => '<span>' + m[0] + '</span>').join('') + '</div>';
+}
+
+function montar(d) {
+  app.innerHTML =
+    '<header>' + (d.servidor.icono ? '<img src="' + escapar(d.servidor.icono) + '" alt="">' : '') +
+      '<div><h1>Recap ' + d.anio + '</h1></div></header>' +
+    '<p class="sub" id="sub"></p>' +
+    '<nav>' +
+      '<a href="/">Inactividad</a>' +
+      '<a href="/recap" class="activo">Recap</a>' +
+    '</nav>' +
+    '<div class="cards" id="cards"></div>' +
+    '<div class="rejilla">' +
+      '<div class="panel"><h2>Más horas de voz</h2><div id="r-voz"></div></div>' +
+      '<div class="panel"><h2>Más tiempo en el AFK</h2><div id="r-afk"></div></div>' +
+      '<div class="panel"><h2>Más tiempo muteado</h2><div id="r-mute"></div></div>' +
+      '<div class="panel"><h2>Más tiempo ensordecido</h2><div id="r-sordo"></div></div>' +
+      '<div class="panel"><h2>Más tiempo compartiendo pantalla</h2><div id="r-pantalla"></div></div>' +
+      '<div class="panel"><h2>Más tiempo con cámara</h2><div id="r-camara"></div></div>' +
+    '</div>' +
+    '<div class="panel"><h2>Canales más usados</h2><div id="canales"></div></div>' +
+    '<div class="panel"><h2>Sesiones más largas</h2><div id="largas"></div></div>' +
+    '<div class="rejilla">' +
+      '<div class="panel"><h2>¿A qué hora se conecta la gente?</h2><div id="franja"></div></div>' +
+      '<div class="panel"><h2>Horas de voz por mes</h2><div id="meses"></div></div>' +
+    '</div>' +
+    '<footer>Estadísticas generales del servidor · lo personal (tu dúo, tu canal, tu racha) irá en el comando <code>/recap</code></footer>';
+  montado = true;
+}
+
+function pintar() {
+  const d = datos;
+  if (d.error) { app.innerHTML = '<p class="empty">' + escapar(d.error) + '</p>'; return; }
+  if (!montado) montar(d);
+
+  const t = d.totales;
+  document.getElementById('sub').innerHTML =
+    escapar(d.servidor.nombre) + ' · actualizado ' + fecha(d.generadoEn) +
+    (d.recapActivo ? '' : ' · <span class="warn">captura desactivada</span>');
+
+  document.getElementById('cards').innerHTML =
+    '<div class="card c-activo"><b>' + dur(t.vozMs) + '</b><span>Voz real</span></div>' +
+    '<div class="card c-gracia"><b>' + dur(t.afkMs) + '</b><span>En el AFK</span></div>' +
+    '<div class="card c-exento"><b>' + dur(t.totalMs) + '</b><span>Total en el servidor</span></div>' +
+    '<div class="card c-inactivo"><b>' + t.personas + '</b><span>Personas en voz</span></div>';
+
+  const r = d.rankings;
+  document.getElementById('r-voz').innerHTML = rank(r.voz, 'Nadie ha usado la voz todavía.');
+  document.getElementById('r-afk').innerHTML = rank(r.afk, 'Nadie ha pasado por el AFK.');
+  document.getElementById('r-mute').innerHTML = rank(r.muteado, 'Nadie se ha muteado.');
+  document.getElementById('r-sordo').innerHTML = rank(r.ensordecido, 'Nadie se ha ensordecido.');
+  document.getElementById('r-pantalla').innerHTML = rank(r.pantalla, 'Nadie ha compartido pantalla.');
+  document.getElementById('r-camara').innerHTML = rank(r.camara, 'Nadie ha encendido la cámara.');
+
+  document.getElementById('canales').innerHTML = d.canales.length
+    ? '<ul class="rank">' + d.canales.map((c, i) =>
+        '<li' + (i === 0 ? ' class="oro"' : '') + '>' +
+          '<span class="pos">' + (i + 1) + '.</span>' +
+          '<span class="quien">' + escapar(c.canal || '(canal borrado)') + '</span>' +
+          '<span class="valor">' + c.personas + ' pers. · ' + dur(c.ms) + '</span>' +
+        '</li>').join('') + '</ul>'
+    : '<p class="empty">Sin datos todavía.</p>';
+
+  document.getElementById('largas').innerHTML = d.sesionesLargas.length
+    ? '<ul class="rank">' + d.sesionesLargas.map((s, i) =>
+        '<li' + (i === 0 ? ' class="oro"' : '') + '>' +
+          '<span class="pos">' + (i + 1) + '.</span>' +
+          '<span class="quien">' + escapar(s.nombre) + ' <span class="muted">en ' + escapar(s.canal || '?') + '</span></span>' +
+          '<span class="valor">' + dur(s.ms) + (s.estimada ? ' *' : '') + '</span>' +
+        '</li>').join('') + '</ul>' +
+        '<p class="muted" style="font-size:12px;margin:10px 0 0"><b>*</b> cerrada por una caída del bot: la duración es aproximada</p>'
+    : '<p class="empty">Sin datos todavía.</p>';
+
+  document.getElementById('franja').innerHTML = franjaHoraria(d.franjaHoraria);
+  document.getElementById('meses').innerHTML = porMes(d.porMes);
+}
+
+async function cargar() {
+  try {
+    const res = await fetch('/api/recap');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    datos = await res.json();
+    pintar();
+  } catch (e) {
+    if (!montado) app.innerHTML = '<p class="warn">No se pudo cargar: ' + escapar(e.message) + '</p>';
+  }
+}
+
+cargar();
+setInterval(cargar, 60000);
+</script>
+</body>
+</html>

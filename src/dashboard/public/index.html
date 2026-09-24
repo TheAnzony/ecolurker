@@ -4,85 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ecolurker — Panel</title>
-<style>
-  :root {
-    --bg: #f6f7f9;
-    --panel: #ffffff;
-    --border: #e2e5ea;
-    --text: #1a1d21;
-    --muted: #6b7280;
-    --inactivo: #ed4245;
-    --activo: #3ba55d;
-    --gracia: #faa61a;
-    --exento: #5865f2;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #16181c;
-      --panel: #1e2126;
-      --border: #2e3339;
-      --text: #e6e8eb;
-      --muted: #9aa3ad;
-    }
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-  }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 64px; }
-
-  header { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
-  header img { width: 44px; height: 44px; border-radius: 50%; }
-  h1 { font-size: 22px; margin: 0; }
-  .sub { color: var(--muted); font-size: 13px; margin-bottom: 26px; }
-
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 26px; }
-  .card { background: var(--panel); border: 1px solid var(--border); border-left-width: 4px; border-radius: 10px; padding: 14px 16px; }
-  .card b { display: block; font-size: 30px; font-weight: 650; line-height: 1.1; }
-  .card span { color: var(--muted); font-size: 13px; }
-  .c-inactivo { border-left-color: var(--inactivo); }
-  .c-activo   { border-left-color: var(--activo); }
-  .c-gracia   { border-left-color: var(--gracia); }
-  .c-exento   { border-left-color: var(--exento); }
-
-  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-bottom: 22px; }
-  .panel h2 { font-size: 15px; margin: 0 0 14px; font-weight: 650; }
-
-  .meta { display: flex; flex-wrap: wrap; gap: 22px; font-size: 14px; }
-  .meta div { color: var(--muted); }
-  .meta b { color: var(--text); font-weight: 600; }
-
-  .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-  input[type=search], select {
-    background: var(--bg); color: var(--text);
-    border: 1px solid var(--border); border-radius: 7px;
-    padding: 8px 11px; font: inherit; font-size: 14px;
-  }
-  input[type=search] { flex: 1; min-width: 200px; }
-  input[type=search]:focus, select:focus { outline: 2px solid var(--exento); outline-offset: 1px; }
-
-  .scroll { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; }
-  th:hover { color: var(--text); }
-  tbody tr:hover { background: color-mix(in srgb, var(--border) 40%, transparent); }
-  td.nombre { white-space: normal; font-weight: 550; }
-
-  .tag { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #fff; }
-  .t-inactivo { background: var(--inactivo); }
-  .t-activo   { background: var(--activo); }
-  .t-gracia   { background: var(--gracia); }
-  .t-exento   { background: var(--exento); }
-
-  .muted { color: var(--muted); }
-  .warn { color: var(--gracia); }
-  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 30px; }
-  .empty { color: var(--muted); font-style: italic; }
-</style>
+<link rel="stylesheet" href="/estilo.css">
 </head>
 <body>
 <div class="wrap" id="app">
@@ -196,6 +118,10 @@ function montar(s) {
     '<header>' + (s.servidor.icono ? '<img src="' + escapar(s.servidor.icono) + '" alt="">' : '') +
       '<div><h1>' + escapar(s.servidor.nombre) + '</h1></div></header>' +
     '<p class="sub" id="sub"></p>' +
+    '<nav>' +
+      '<a href="/" class="activo">Inactividad</a>' +
+      '<a href="/recap">Recap</a>' +
+    '</nav>' +
     '<div class="cards" id="cards"></div>' +
     '<div class="panel"><h2>Configuración</h2><div id="config"></div></div>' +
     '<div class="panel"><h2>Evolución (últimos 30 días)</h2><div id="grafica"></div></div>' +

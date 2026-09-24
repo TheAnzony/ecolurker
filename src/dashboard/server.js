@@ -4,8 +4,46 @@ const path = require('node:path');
 const config = require('../config');
 const logger = require('../utils/logger');
 const { buildPayload } = require('./data');
+const { resumenGeneral } = require('../services/recap/stats');
 
-const INDEX = path.join(__dirname, 'public', 'index.html');
+const PUBLIC = path.join(__dirname, 'public');
+
+const PAGINAS = {
+  '/': 'index.html',
+  '/index.html': 'index.html',
+  '/recap': 'recap.html',
+  '/recap.html': 'recap.html',
+};
+
+const TIPOS = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+};
+
+/**
+ * Sirve un archivo de `public/`. El nombre nunca viene del usuario sin filtrar:
+ * o sale de PAGINAS, o se comprueba que el resultado siga dentro de la carpeta,
+ * para que un `../` no pueda sacar archivos de fuera.
+ */
+function servirArchivo(res, nombre) {
+  const destino = path.join(PUBLIC, nombre);
+  if (!destino.startsWith(PUBLIC + path.sep)) {
+    res.writeHead(403).end('Prohibido');
+    return;
+  }
+  if (!fs.existsSync(destino)) {
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('No encontrado');
+    return;
+  }
+  res.writeHead(200, {
+    'Content-Type': TIPOS[path.extname(destino)] || 'text/plain',
+    // Sin esto el navegador se queda con la version vieja de la pagina tras
+    // actualizar el bot, y el panel parece no haber cambiado.
+    'Cache-Control': 'no-cache',
+  });
+  fs.createReadStream(destino).pipe(res);
+}
 
 /**
  * Dashboard de solo lectura.
@@ -36,14 +74,37 @@ function startDashboard(client) {
 
       const url = new URL(req.url, 'http://localhost');
 
-      if (url.pathname === '/' || url.pathname === '/index.html') {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        fs.createReadStream(INDEX).pipe(res);
+      if (PAGINAS[url.pathname]) {
+        servirArchivo(res, PAGINAS[url.pathname]);
+        return;
+      }
+
+      if (url.pathname === '/estilo.css') {
+        servirArchivo(res, 'estilo.css');
         return;
       }
 
       if (url.pathname === '/api/estado') {
         const payload = await buildPayload(client);
+        res.writeHead(200, {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Cache-Control': 'no-store',
+        });
+        res.end(JSON.stringify(payload));
+        return;
+      }
+
+      if (url.pathname === '/api/recap') {
+        const guild = client.guilds.cache.first();
+        if (!guild) {
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ error: 'El bot no esta en ningun servidor' }));
+          return;
+        }
+        const anio = Number(url.searchParams.get('anio')) || new Date().getFullYear();
+        const payload = resumenGeneral(guild.id, anio);
+        payload.servidor = { nombre: guild.name, icono: guild.iconURL({ size: 128 }) };
+        payload.recapActivo = config.recapEnabled;
         res.writeHead(200, {
           'Content-Type': 'application/json; charset=utf-8',
           'Cache-Control': 'no-store',

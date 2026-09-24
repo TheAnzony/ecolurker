@@ -61,6 +61,19 @@ if (sessionCols.length > 0 && !sessionCols.includes('was_estimated')) {
   logger.info('Migracion aplicada: voice_sessions.was_estimated');
 }
 
+// Migracion: marca de sesion reanudada al arrancar, para poder volver a unir
+// los trozos en que un reinicio parte una misma estancia en el canal.
+if (sessionCols.length > 0 && !sessionCols.includes('from_restart')) {
+  db.exec('ALTER TABLE voice_sessions ADD COLUMN from_restart INTEGER NOT NULL DEFAULT 0');
+  logger.info('Migracion aplicada: voice_sessions.from_restart');
+}
+
+// Migracion: hueco de bot caido a descontar de la duracion de una sesion reanudada
+if (sessionCols.length > 0 && !sessionCols.includes('gap_ms')) {
+  db.exec('ALTER TABLE voice_sessions ADD COLUMN gap_ms INTEGER NOT NULL DEFAULT 0');
+  logger.info('Migracion aplicada: voice_sessions.gap_ms');
+}
+
 logger.info(`Base de datos lista en ${config.dbPath}`);
 
 module.exports = db;

@@ -88,6 +88,9 @@ CREATE TABLE IF NOT EXISTS voice_sessions (
 
   is_afk          INTEGER NOT NULL DEFAULT 0,  -- sesion en el canal AFK del servidor
   from_move       INTEGER NOT NULL DEFAULT 0,  -- empezo por cambio de canal, no por entrada real
+  from_restart    INTEGER NOT NULL DEFAULT 0,  -- la abrio el bot al arrancar: esa persona ya estaba
+                                               -- dentro. No es una entrada real; permite volver a
+                                               -- unir los trozos que parte un reinicio.
   joined_empty    INTEGER NOT NULL DEFAULT 0,  -- el canal estaba vacio al entrar
   left_empty      INTEGER NOT NULL DEFAULT 0,  -- el canal quedo vacio al salir
 
@@ -107,7 +110,17 @@ CREATE TABLE IF NOT EXISTS voice_sessions (
   -- 1 = la sesion no se cerro con el usuario saliendo, sino que el bot murio y
   -- se cerro al ultimo latido conocido. El dato es bueno hasta ese punto, pero
   -- se marca para poder ser transparente en el recap.
-  was_estimated   INTEGER NOT NULL DEFAULT 0
+  was_estimated   INTEGER NOT NULL DEFAULT 0,
+
+  -- Tiempo que el bot estuvo caido mientras esta sesion seguia viva. Una sesion
+  -- reanudada tras un reinicio corto continua en la misma fila, asi que hay que
+  -- descontar el hueco para no regalar como tiempo de voz el rato que el bot
+  -- no estuvo mirando.
+  --
+  --   DURACION REAL = ended_at - started_at - gap_ms
+  --
+  -- Cualquier calculo de duracion DEBE restar esta columna.
+  gap_ms          INTEGER NOT NULL DEFAULT 0
 );
 
 -- Una unica fila: la ultima vez que el bot dio senales de vida. Permite cerrar

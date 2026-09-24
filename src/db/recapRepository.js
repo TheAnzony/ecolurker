@@ -14,11 +14,11 @@ const statements = {
   openSession: db.prepare(`
     INSERT INTO voice_sessions (
       guild_id, user_id, channel_id, channel_name, started_at,
-      is_afk, from_move, joined_empty,
+      is_afk, from_move, from_restart, joined_empty,
       muted_since, deafened_since, video_since, streaming_since
     ) VALUES (
       @guildId, @userId, @channelId, @channelName, @startedAt,
-      @isAfk, @fromMove, @joinedEmpty,
+      @isAfk, @fromMove, @fromRestart, @joinedEmpty,
       @mutedSince, @deafenedSince, @videoSince, @streamingSince
     )
   `),
@@ -76,6 +76,24 @@ const statements = {
     WHERE id = @id
   `),
 
+  findResumable: db.prepare(`
+    SELECT * FROM voice_sessions
+    WHERE guild_id = @guildId AND user_id = @userId AND channel_id = @channelId
+      AND ended_at IS NOT NULL AND ended_at >= @desde
+    ORDER BY ended_at DESC LIMIT 1
+  `),
+
+  resumeSession: db.prepare(`
+    UPDATE voice_sessions SET
+      ended_at        = NULL,
+      gap_ms          = gap_ms + @gapMs,
+      muted_since     = @mutedSince,
+      deafened_since  = @deafenedSince,
+      video_since     = @videoSince,
+      streaming_since = @streamingSince
+    WHERE id = @id
+  `),
+
   getHeartbeat: db.prepare(`SELECT beat_at AS beatAt FROM bot_heartbeat WHERE id = 1`),
 
   setHeartbeat: db.prepare(`
@@ -106,7 +124,10 @@ function openSession(data) {
     startedAt: now,
     isAfk: data.isAfk ? 1 : 0,
     fromMove: data.fromMove ? 1 : 0,
-    joinedEmpty: data.joinedEmpty ? 1 : 0,
+    fromRestart: data.fromRestart ? 1 : 0,
+    // Reanudar tras un reinicio no es "abrir el canal": esa persona ya estaba
+    // dentro, y acreditarselo falsearia la categoria de quien abre los canales.
+    joinedEmpty: data.joinedEmpty && !data.fromRestart ? 1 : 0,
     // Si entra ya muteado (o en el canal AFK), el cronometro arranca al entrar
     mutedSince: data.muted ? now : null,
     deafenedSince: data.deafened ? now : null,
@@ -172,6 +193,39 @@ function applyStateChange(session, nuevoEstado, at) {
   }
 
   statements.updateSessionState.run(valores);
+}
+
+/**
+ * Retoma la sesion que esa persona tenia en ese mismo canal justo antes del
+ * reinicio, si la cerro hace menos de `ventanaMs`. Devuelve el hueco
+ * descontado, o null si no habia nada que retomar.
+ *
+ * El rato que el bot estuvo caido se acumula en `gap_ms` y se resta al calcular
+ * la duracion: la sesion cuenta como una sola, pero sin regalar el tiempo que
+ * nadie estuvo observando.
+ */
+function resumeSession({ guildId, userId, channelId, ventanaMs, estado, at = Date.now() }) {
+  const previa = statements.findResumable.get({
+    guildId,
+    userId,
+    channelId,
+    desde: at - ventanaMs,
+  });
+  if (!previa) return null;
+
+  const gapMs = Math.max(0, at - previa.ended_at);
+  statements.resumeSession.run({
+    id: previa.id,
+    gapMs,
+    // Los cronometros se reinician con el estado ACTUAL: durante la caida no
+    // sabemos si estuvo muteado, asi que ese rato simplemente no cuenta.
+    mutedSince: estado.muted ? at : null,
+    deafenedSince: estado.deafened ? at : null,
+    videoSince: estado.video ? at : null,
+    streamingSince: estado.streaming ? at : null,
+  });
+
+  return { id: previa.id, gapMs };
 }
 
 function recordHeartbeat(at = Date.now()) {
@@ -261,6 +315,7 @@ module.exports = {
   applyStateChange,
   closeOrphanSessions,
   closeAllSessionsGracefully,
+  resumeSession,
   recordHeartbeat,
   getLastHeartbeat,
   countSessions,

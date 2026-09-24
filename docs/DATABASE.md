@@ -169,6 +169,8 @@ guarda solo estado actual.
 | `started_at` / `ended_at` | INTEGER | Timestamps. `ended_at NULL` = sesión abierta |
 | `is_afk` | INTEGER | Sesión en el canal AFK del servidor |
 | `from_move` | INTEGER | Empezó por cambio de canal, no por entrada real |
+| `from_restart` | INTEGER | La abrió el bot al arrancar: esa persona ya estaba dentro |
+| `gap_ms` | INTEGER | Tiempo que el bot estuvo caído durante esta sesión, **a descontar de la duración** |
 | `joined_empty` / `left_empty` | INTEGER | El canal estaba/quedó vacío |
 | `muted_ms` / `deafened_ms` / `video_ms` / `streaming_ms` | INTEGER | Tiempo acumulado en cada estado dentro de esta sesión |
 | `muted_since` / `deafened_since` / `video_since` / `streaming_since` | INTEGER | Marca de cuándo empezó el estado actual. Se vuelcan a los acumuladores al cerrar |
@@ -183,6 +185,10 @@ de voz. Ver [RECAP.md](RECAP.md#las-sesiones-interrumpidas-se-conservan-no-se-pi
 
 Unas 18.000 filas al año con el ritmo actual (~50 entradas diarias):
 irrelevante para SQLite.
+
+> **La duración de una sesión NO es `ended_at - started_at`.** Hay que restar
+> `gap_ms`, el tiempo que el bot estuvo caído mientras la sesión seguía viva.
+> Ver [RECAP.md](RECAP.md#un-reinicio-no-parte-una-sesión-en-dos).
 
 Los pares de "dúo del año" **no se guardan**: se calculan cuando se pide el
 recap, cruzando solapes de sesiones en el mismo canal.

@@ -42,7 +42,7 @@ function humanosEn(channel, excluirId = null) {
   return channel.members.filter((m) => !m.user.bot && m.id !== excluirId).size;
 }
 
-function abrirSesion(member, voiceState, { fromMove }) {
+function abrirSesion(member, voiceState, { fromMove = false, fromRestart = false } = {}) {
   const channel = voiceState.channel;
   if (!channel) return;
 
@@ -57,6 +57,7 @@ function abrirSesion(member, voiceState, { fromMove }) {
     startedAt: Date.now(),
     isAfk: enAfk,
     fromMove,
+    fromRestart,
     // Al entrar, el canal estaba vacio si el unico humano es el que acaba de entrar
     joinedEmpty: humanosEn(channel, member.id) === 0,
     ...leerEstado(voiceState, enAfk),
@@ -125,6 +126,18 @@ function handleVoiceStateUpdate(oldState, newState) {
  */
 const HEARTBEAT_MS = 60 * 1000;
 
+/**
+ * Si el bot vuelve antes de esto y la persona sigue en el mismo canal, se
+ * entiende que nunca se fue: se retoma su sesion anterior en vez de abrir una
+ * nueva, para que una estancia de 2 horas partida por un reinicio siga
+ * contando como 2 horas y no como dos trozos.
+ *
+ * Pasado el plazo se asume que es una estancia distinta. Una hora es un
+ * compromiso: lo bastante largo para cubrir reinicios y cortes de luz, lo
+ * bastante corto para no unir la sesion de anoche con la de esta manana.
+ */
+const VENTANA_REANUDACION_MS = 60 * 60 * 1000;
+
 function initializeTracking(client) {
   if (!config.recapEnabled) {
     logger.info('Captura de sesiones de voz desactivada (RECAP_ENABLED=false)');
@@ -140,15 +153,37 @@ function initializeTracking(client) {
     );
   }
 
-  let reanudadas = 0;
+  let retomadas = 0;
+  let nuevas = 0;
   for (const guild of client.guilds.cache.values()) {
     for (const voiceState of guild.voiceStates.cache.values()) {
       const member = voiceState.member;
       if (!member || member.user.bot || !voiceState.channelId) continue;
-      abrirSesion(member, voiceState, { fromMove: false });
-      reanudadas += 1;
+
+      const enAfk = esCanalAfk(guild, voiceState.channelId);
+
+      // Si seguia en el mismo canal y el bot volvio pronto, se entiende que no
+      // se fue: se continua su sesion anterior en la misma fila.
+      const retomada = recapRepository.resumeSession({
+        guildId: guild.id,
+        userId: member.id,
+        channelId: voiceState.channelId,
+        ventanaMs: VENTANA_REANUDACION_MS,
+        estado: leerEstado(voiceState, enAfk),
+      });
+
+      if (retomada) {
+        retomadas += 1;
+      } else {
+        // Marcada como reanudada: no es una entrada real, esa persona ya estaba
+        // dentro antes del reinicio, y contarla como entrada falsearia las
+        // estadisticas de entradas y de quien abre los canales.
+        abrirSesion(member, voiceState, { fromRestart: true });
+        nuevas += 1;
+      }
     }
   }
+  const reanudadas = retomadas + nuevas;
 
   // El latido va DESPUES de abrir las sesiones, no antes: si se escribiera
   // primero quedaria por delante de ellas, y una caida en el primer minuto
@@ -163,7 +198,8 @@ function initializeTracking(client) {
   }, HEARTBEAT_MS).unref();
 
   logger.info(
-    `Captura de sesiones activa. ${reanudadas} persona(s) ya estaban en voz al arrancar`
+    `Captura de sesiones activa. ${reanudadas} persona(s) ya estaban en voz al arrancar ` +
+      `(${retomadas} continuan su sesion anterior, ${nuevas} empiezan una nueva)`
   );
 }
 

@@ -84,8 +84,44 @@ a 60 segundos como mucho por caída.
 > de ellas, y una caída en el primer minuto las cerraría con duración cero al
 > no poder terminar antes de empezar.
 
-Al arrancar, el bot también abre sesión para quien ya estuviera conectado, de
-modo que no haya que esperar a que se mueva para empezar a contarlo.
+Al arrancar, el bot también empieza a contar a quien ya estuviera conectado,
+de modo que no haya que esperar a que se mueva.
+
+### Un reinicio no parte una sesión en dos
+
+Si el bot vuelve **en menos de una hora** y la persona sigue en el **mismo
+canal**, se entiende que nunca se fue: se continúa su sesión anterior en la
+misma fila en vez de abrir una nueva. Una estancia de 2 horas partida por un
+reinicio a los 10 minutos sigue contando como una sesión de 2 horas.
+
+Pasada la hora, o si volvió a otro canal, se considera una estancia distinta y
+se abre una sesión nueva (marcada con `from_restart`, porque tampoco fue una
+entrada real: esa persona ya estaba dentro).
+
+**El tiempo que el bot estuvo caído no cuenta.** Se acumula en `gap_ms` y se
+descuenta:
+
+```
+DURACION REAL = ended_at - started_at - gap_ms
+```
+
+> **Cualquier cálculo de duración debe restar `gap_ms`.** Si no, una sesión
+> reanudada regala como tiempo de voz el rato que el bot no estuvo mirando.
+
+Sin esto, las estadísticas afectadas por los reinicios serían:
+
+| Estadística | Sin reanudar | Con reanudación |
+|---|---|---|
+| Horas totales | Correcta (la suma cuadra) | Correcta |
+| Sesión más larga | **Truncada** por cada reinicio | Correcta |
+| Entradas relámpago (*yo-yo*) | **Inflada**: cada reinicio añade una entrada falsa | Correcta |
+| *El que abre el bar* | **Falseada**: quien esté solo al reiniciar figura como que abrió el canal | Correcta |
+
+El límite de una hora es un compromiso: lo bastante largo para cubrir
+reinicios y cortes de luz, lo bastante corto para no unir la sesión de anoche
+con la de esta mañana. Si alguien sale y vuelve al mismo canal durante la
+caída, se contará como si no se hubiera ido — es el precio de no perder el
+dato, y para un recap entre amigos compensa.
 
 ### Los datos ya no se borran solos
 

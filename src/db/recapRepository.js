@@ -57,12 +57,30 @@ const statements = {
     WHERE id = @id
   `),
 
-  deleteOpenSessions: db.prepare(`
-    DELETE FROM voice_sessions WHERE ended_at IS NULL
+  getAllOpenSessions: db.prepare(`
+    SELECT * FROM voice_sessions WHERE ended_at IS NULL
   `),
 
-  countOpenSessions: db.prepare(`
-    SELECT COUNT(*) AS total FROM voice_sessions WHERE ended_at IS NULL
+  closeEstimated: db.prepare(`
+    UPDATE voice_sessions SET
+      ended_at        = @endedAt,
+      was_estimated   = 1,
+      muted_ms        = @mutedMs,
+      deafened_ms     = @deafenedMs,
+      video_ms        = @videoMs,
+      streaming_ms    = @streamingMs,
+      muted_since     = NULL,
+      deafened_since  = NULL,
+      video_since     = NULL,
+      streaming_since = NULL
+    WHERE id = @id
+  `),
+
+  getHeartbeat: db.prepare(`SELECT beat_at AS beatAt FROM bot_heartbeat WHERE id = 1`),
+
+  setHeartbeat: db.prepare(`
+    INSERT INTO bot_heartbeat (id, beat_at) VALUES (1, @beatAt)
+    ON CONFLICT (id) DO UPDATE SET beat_at = excluded.beat_at
   `),
 
   countSessions: db.prepare(`
@@ -156,16 +174,72 @@ function applyStateChange(session, nuevoEstado, at) {
   statements.updateSessionState.run(valores);
 }
 
-/**
- * Descarta las sesiones que quedaron abiertas de una ejecucion anterior.
- * Decision explicita: si el bot se cayo, no sabemos cuando salio esa persona,
- * y es preferible perder la medicion a inventarla. Devuelve cuantas se fueron.
- */
-function discardOpenSessions() {
-  const { total } = statements.countOpenSessions.get();
-  if (total > 0) statements.deleteOpenSessions.run();
-  return total;
+function recordHeartbeat(at = Date.now()) {
+  statements.setHeartbeat.run({ beatAt: at });
 }
+
+function getLastHeartbeat() {
+  return statements.getHeartbeat.get()?.beatAt ?? null;
+}
+
+/**
+ * Cierra las sesiones que quedaron abiertas de una ejecucion anterior,
+ * usando el ultimo latido del bot como hora de salida.
+ *
+ * No se descartan: se prefiere un dato aproximado (bueno hasta el ultimo
+ * minuto) a perderlo. Pero tampoco se cierran "ahora", porque eso contaria
+ * toda la caida como tiempo de voz: una noche de apagon regalaria horas a
+ * quien estuviera conectado en ese momento y volveria el ranking una loteria.
+ *
+ * Quedan marcadas con `was_estimated` para poder decirlo en el recap.
+ */
+const closeOrphanSessions = db.transaction(() => {
+  const abiertas = statements.getAllOpenSessions.all();
+  if (abiertas.length === 0) return { total: 0, cierre: null };
+
+  // Sin latido previo (primera ejecucion con esta funcion) se usa "ahora":
+  // no hay informacion mejor disponible.
+  const cierre = getLastHeartbeat() ?? Date.now();
+
+  for (const sesion of abiertas) {
+    // Nunca antes de empezar: si el latido es mas viejo que la sesion, la
+    // sesion dura cero en vez de un negativo.
+    const endedAt = Math.max(sesion.started_at, cierre);
+    const totals = flushTimers(sesion, endedAt);
+    statements.closeEstimated.run({
+      id: sesion.id,
+      endedAt,
+      mutedMs: totals.mutedMs,
+      deafenedMs: totals.deafenedMs,
+      videoMs: totals.videoMs,
+      streamingMs: totals.streamingMs,
+    });
+  }
+
+  return { total: abiertas.length, cierre };
+});
+
+/**
+ * Cierre limpio al apagar el bot: las sesiones se cierran con la hora exacta,
+ * sin estimar. Docker manda SIGTERM antes de parar el contenedor, asi que un
+ * reinicio voluntario no pierde ni un segundo.
+ */
+const closeAllSessionsGracefully = db.transaction((at = Date.now()) => {
+  const abiertas = statements.getAllOpenSessions.all();
+  for (const sesion of abiertas) {
+    const totals = flushTimers(sesion, at);
+    statements.closeSession.run({
+      id: sesion.id,
+      endedAt: at,
+      leftEmpty: 0,
+      mutedMs: totals.mutedMs,
+      deafenedMs: totals.deafenedMs,
+      videoMs: totals.videoMs,
+      streamingMs: totals.streamingMs,
+    });
+  }
+  return abiertas.length;
+});
 
 function countSessions(guildId) {
   return statements.countSessions.get({ guildId }).total;
@@ -185,7 +259,10 @@ module.exports = {
   getOpenSession,
   closeSession,
   applyStateChange,
-  discardOpenSessions,
+  closeOrphanSessions,
+  closeAllSessionsGracefully,
+  recordHeartbeat,
+  getLastHeartbeat,
   countSessions,
   countUserSessions,
   deleteUserSessions,

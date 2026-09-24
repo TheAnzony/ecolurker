@@ -102,7 +102,21 @@ CREATE TABLE IF NOT EXISTS voice_sessions (
   muted_since     INTEGER,
   deafened_since  INTEGER,
   video_since     INTEGER,
-  streaming_since INTEGER
+  streaming_since INTEGER,
+
+  -- 1 = la sesion no se cerro con el usuario saliendo, sino que el bot murio y
+  -- se cerro al ultimo latido conocido. El dato es bueno hasta ese punto, pero
+  -- se marca para poder ser transparente en el recap.
+  was_estimated   INTEGER NOT NULL DEFAULT 0
+);
+
+-- Una unica fila: la ultima vez que el bot dio senales de vida. Permite cerrar
+-- con honestidad las sesiones que quedaron abiertas tras una caida, en vez de
+-- contar toda la caida como tiempo de voz (una noche de apagon regalaria horas
+-- a quien estuviera conectado en ese momento y falsearia el ranking entero).
+CREATE TABLE IF NOT EXISTS bot_heartbeat (
+  id      INTEGER PRIMARY KEY CHECK (id = 1),
+  beat_at INTEGER NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON voice_sessions (guild_id, user_id, started_at);

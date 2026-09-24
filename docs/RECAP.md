@@ -55,21 +55,34 @@ rankings si esas horas suman al total de voz o no. Sin ella, quien se deje el
 PC encendido toda la noche dominaría el ranking de horas sin haber hablado con
 nadie, y no habría forma de corregirlo sin volver a capturar los datos.
 
-### Las sesiones interrumpidas se descartan
+### Las sesiones interrumpidas se conservan, no se pierden
 
-Si el bot se cae con gente dentro de un canal, esas sesiones quedan abiertas
-(`ended_at NULL`). Al arrancar se **borran**, y queda un aviso en el log con
-cuántas se perdieron.
+Si el bot se para con gente dentro de un canal, esas sesiones quedan abiertas
+(`ended_at NULL`). Hay dos caminos según cómo se haya parado:
 
-Es una decisión explícita: no hay forma honesta de saber cuándo salió esa
-persona. Estimarlo daría números inventados, y se prefiere un hueco a un dato
-falso.
+**Apagado ordenado** (`docker compose restart`, `stop`, `up -d`): Docker manda
+`SIGTERM` y da unos segundos de margen. El bot lo aprovecha para cerrar todas
+las sesiones abiertas **con la hora exacta**. No se pierde ni se inventa nada.
+Es el caso habitual.
 
-> **Consecuencia a tener en cuenta**: las sesiones largas son las que más
-> probabilidad tienen de ser interrumpidas por un reinicio, así que los
-> reinicios frecuentes sesgan las cifras **a la baja y justo contra la gente
-> más activa**. Cuanto más estable sea el alojamiento, más fiables las
-> estadísticas — ver [DEPLOY.md](DEPLOY.md).
+**Caída brusca** (corte de luz, `kill`, cuelgue): no hay aviso previo. Al
+arrancar de nuevo, esas sesiones se cierran **en el último latido conocido** y
+se marcan con `was_estimated = 1`.
+
+El bot escribe un latido en `bot_heartbeat` cada minuto. Eso acota la pérdida
+a 60 segundos como mucho por caída.
+
+> **Por qué no se cierran simplemente "al arrancar de nuevo"**: eso contaría
+> toda la caída como tiempo de voz. Con 11 personas conectadas y un apagón
+> nocturno de 10 horas, cada una se llevaría +10 horas por el azar de estar en
+> voz en ese momento — una sola noche generaría más horas que un mes de uso
+> real y el ranking anual lo ganaría quien tuvo mala suerte. El latido evita
+> eso conservando el dato real hasta donde se conoce.
+
+> **Detalle de implementación**: el latido se escribe **después** de abrir las
+> sesiones al arrancar, no antes. Si se escribiera primero quedaría por delante
+> de ellas, y una caída en el primer minuto las cerraría con duración cero al
+> no poder terminar antes de empezar.
 
 Al arrancar, el bot también abre sesión para quien ya estuviera conectado, de
 modo que no haya que esperar a que se mueva para empezar a contarlo.

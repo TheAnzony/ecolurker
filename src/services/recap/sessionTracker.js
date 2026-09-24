@@ -123,17 +123,20 @@ function handleVoiceStateUpdate(oldState, newState) {
  * hasta que se moviera, y las sesiones de la ejecucion anterior quedarian
  * abiertas para siempre falseando las consultas.
  */
+const HEARTBEAT_MS = 60 * 1000;
+
 function initializeTracking(client) {
   if (!config.recapEnabled) {
     logger.info('Captura de sesiones de voz desactivada (RECAP_ENABLED=false)');
     return;
   }
 
-  const descartadas = recapRepository.discardOpenSessions();
-  if (descartadas > 0) {
+  const { total, cierre } = recapRepository.closeOrphanSessions();
+  if (total > 0) {
+    const hueco = Math.round((Date.now() - cierre) / 60000);
     logger.warn(
-      `Descartadas ${descartadas} sesion(es) de voz sin cerrar de la ejecucion anterior ` +
-        '(no se puede saber cuando terminaron)'
+      `Cerradas ${total} sesion(es) que quedaron abiertas por una caida, al ultimo ` +
+        `latido conocido (hace ${hueco} min). Marcadas como estimadas.`
     );
   }
 
@@ -147,9 +150,34 @@ function initializeTracking(client) {
     }
   }
 
+  // El latido va DESPUES de abrir las sesiones, no antes: si se escribiera
+  // primero quedaria por delante de ellas, y una caida en el primer minuto
+  // las cerraria con duracion cero al no poder terminar antes de empezar.
+  recapRepository.recordHeartbeat();
+  setInterval(() => {
+    try {
+      recapRepository.recordHeartbeat();
+    } catch (err) {
+      logger.error('Fallo al escribir el latido:', err.message);
+    }
+  }, HEARTBEAT_MS).unref();
+
   logger.info(
     `Captura de sesiones activa. ${reanudadas} persona(s) ya estaban en voz al arrancar`
   );
 }
 
-module.exports = { handleVoiceStateUpdate, initializeTracking };
+/**
+ * Cierre ordenado al apagar el bot. Docker manda SIGTERM antes de parar el
+ * contenedor, asi que un reinicio voluntario (el caso habitual) cierra las
+ * sesiones con la hora exacta y no pierde nada.
+ */
+function shutdownTracking() {
+  if (!config.recapEnabled) return 0;
+
+  const cerradas = recapRepository.closeAllSessionsGracefully(Date.now());
+  recapRepository.recordHeartbeat();
+  return cerradas;
+}
+
+module.exports = { handleVoiceStateUpdate, initializeTracking, shutdownTracking };

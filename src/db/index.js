@@ -54,6 +54,13 @@ if (!voiceCols.includes('session_count')) {
   logger.info('Migracion aplicada: voice_logs.session_count');
 }
 
+// Migracion: marca de sesion cerrada por caida del bot en vez de por salida real
+const sessionCols = db.prepare('PRAGMA table_info(voice_sessions)').all().map((c) => c.name);
+if (sessionCols.length > 0 && !sessionCols.includes('was_estimated')) {
+  db.exec('ALTER TABLE voice_sessions ADD COLUMN was_estimated INTEGER NOT NULL DEFAULT 0');
+  logger.info('Migracion aplicada: voice_sessions.was_estimated');
+}
+
 logger.info(`Base de datos lista en ${config.dbPath}`);
 
 module.exports = db;

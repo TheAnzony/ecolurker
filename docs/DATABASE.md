@@ -172,6 +172,14 @@ guarda solo estado actual.
 | `joined_empty` / `left_empty` | INTEGER | El canal estaba/quedó vacío |
 | `muted_ms` / `deafened_ms` / `video_ms` / `streaming_ms` | INTEGER | Tiempo acumulado en cada estado dentro de esta sesión |
 | `muted_since` / `deafened_since` / `video_since` / `streaming_since` | INTEGER | Marca de cuándo empezó el estado actual. Se vuelcan a los acumuladores al cerrar |
+| `was_estimated` | INTEGER | `1` = no se cerró con el usuario saliendo, sino que el bot se cayó y se cerró en el último latido conocido |
+
+### `bot_heartbeat`
+
+Una única fila (`id = 1`) con la última vez que el bot dio señales de vida,
+actualizada cada minuto. Permite cerrar con honestidad las sesiones que
+quedaron abiertas tras una caída, en vez de contar toda la caída como tiempo
+de voz. Ver [RECAP.md](RECAP.md#las-sesiones-interrumpidas-se-conservan-no-se-pierden).
 
 Unas 18.000 filas al año con el ritmo actual (~50 entradas diarias):
 irrelevante para SQLite.

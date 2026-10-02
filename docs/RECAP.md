@@ -88,6 +88,32 @@ WHERE user_id = ? AND is_afk = 1 AND ended_at IS NOT NULL
 Además queda bien al presentarlo: *"40 horas en el servidor — 32 hablando y 8
 tirado en el AFK"*.
 
+### Muteado y ensordecido son excluyentes
+
+Discord **mutea automáticamente a quien se ensordece**. Si se contaran los dos
+estados a la vez, el ranking de muteado sería una copia del de ensordecido:
+Un miembro acumulaba 1839 minutos "muteado" de los que 1764 eran en realidad
+sordera, y otro salía con 1527 minutos de los que absolutamente todos lo
+eran.
+
+Por eso cada estado mide una cosa distinta:
+
+| Estado | Qué significa | Apodo |
+|---|---|---|
+| `muted` | Está escuchando pero no habla | *el oyente* |
+| `deafened` | Ni habla ni escucha | *el fantasma* |
+
+Quien está ensordecido **no suma** al tiempo muteado.
+
+La corrección se aplicó también a los datos ya guardados (`muted_ms -
+deafened_ms`), posible porque el tiempo ensordecido estaba contenido dentro del
+muteado. Se usa `MAX(..., 0)` por los casos de sordera impuesta por un
+moderador sin mute, donde esa contención no se cumple.
+
+> Las correcciones de **datos** se registran en `applied_migrations` para no
+> reaplicarse en cada arranque. Las de **esquema** no lo necesitan: se detectan
+> solas mirando las columnas con `PRAGMA table_info`.
+
 ### El estado del micro se guarda tal cual, también en el AFK
 
 Durante un tiempo el bot forzaba `muted = true` en las sesiones de AFK. Se

@@ -74,6 +74,38 @@ if (sessionCols.length > 0 && !sessionCols.includes('gap_ms')) {
   logger.info('Migracion aplicada: voice_sessions.gap_ms');
 }
 
+/** Ejecuta una correccion de datos una sola vez en la vida de la base. */
+function unaVez(nombre, descripcion, fn) {
+  const yaEsta = db.prepare('SELECT 1 FROM applied_migrations WHERE name = ?').get(nombre);
+  if (yaEsta) return;
+
+  const cambios = db.transaction(fn)();
+  db.prepare('INSERT INTO applied_migrations (name, applied_at) VALUES (?, ?)').run(
+    nombre,
+    Date.now()
+  );
+  logger.info(`Correccion de datos aplicada: ${descripcion} (${cambios} filas)`);
+}
+
+// Ensordecerse en Discord mutea automaticamente, asi que todo el tiempo
+// ensordecido se estaba sumando TAMBIEN al muteado y los dos rankings salian
+// casi identicos. Ahora se capturan excluyentes; esto corrige lo ya guardado.
+//
+// Se puede restar porque el tiempo ensordecido estaba contenido dentro del
+// muteado. El MAX(...,0) cubre los casos de sordera impuesta por un moderador
+// sin mute, donde la contencion no se cumple.
+unaVez('muted_sin_deafened', 'separar tiempo muteado de ensordecido', () => {
+  const r = db
+    .prepare('UPDATE voice_sessions SET muted_ms = MAX(muted_ms - deafened_ms, 0) WHERE deafened_ms > 0')
+    .run();
+  // En las sesiones aun abiertas con los dos cronometros corriendo, se para el
+  // de muteado: a partir de ahora ese rato solo cuenta como ensordecido.
+  db.prepare(
+    'UPDATE voice_sessions SET muted_since = NULL WHERE ended_at IS NULL AND deafened_since IS NOT NULL'
+  ).run();
+  return r.changes;
+});
+
 logger.info(`Base de datos lista en ${config.dbPath}`);
 
 module.exports = db;

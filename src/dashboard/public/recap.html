@@ -82,8 +82,12 @@ function montar(d) {
     '<div class="rejilla">' +
       '<div class="panel"><h2>Más horas de voz</h2><div id="r-voz"></div></div>' +
       '<div class="panel"><h2>Más tiempo en el AFK</h2><div id="r-afk"></div></div>' +
-      '<div class="panel"><h2>Más tiempo muteado</h2><div id="r-mute"></div></div>' +
-      '<div class="panel"><h2>Más tiempo ensordecido</h2><div id="r-sordo"></div></div>' +
+      '<div class="panel"><h2>Más tiempo muteado</h2>' +
+        '<p class="muted" style="font-size:12px;margin:-8px 0 12px">Escucha pero no habla</p>' +
+        '<div id="r-mute"></div></div>' +
+      '<div class="panel"><h2>Más tiempo ensordecido</h2>' +
+        '<p class="muted" style="font-size:12px;margin:-8px 0 12px">Ni habla ni escucha · no cuenta como muteado</p>' +
+        '<div id="r-sordo"></div></div>' +
       '<div class="panel"><h2>Más tiempo compartiendo pantalla</h2><div id="r-pantalla"></div></div>' +
       '<div class="panel"><h2>Más tiempo con cámara</h2><div id="r-camara"></div></div>' +
     '</div>' +

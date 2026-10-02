@@ -123,6 +123,14 @@ CREATE TABLE IF NOT EXISTS voice_sessions (
   gap_ms          INTEGER NOT NULL DEFAULT 0
 );
 
+-- Correcciones de DATOS ya aplicadas. Las migraciones de esquema se detectan
+-- solas con PRAGMA table_info, pero una correccion de datos no se nota mirando
+-- las columnas: sin este registro se reaplicaria en cada arranque.
+CREATE TABLE IF NOT EXISTS applied_migrations (
+  name       TEXT PRIMARY KEY,
+  applied_at INTEGER NOT NULL
+);
+
 -- Una unica fila: la ultima vez que el bot dio senales de vida. Permite cerrar
 -- con honestidad las sesiones que quedaron abiertas tras una caida, en vez de
 -- contar toda la caida como tiempo de voz (una noche de apagon regalaria horas

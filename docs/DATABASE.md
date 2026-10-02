@@ -173,8 +173,20 @@ guarda solo estado actual.
 | `gap_ms` | INTEGER | Tiempo que el bot estuvo caído durante esta sesión, **a descontar de la duración** |
 | `joined_empty` / `left_empty` | INTEGER | El canal estaba/quedó vacío |
 | `muted_ms` / `deafened_ms` / `video_ms` / `streaming_ms` | INTEGER | Tiempo acumulado en cada estado dentro de esta sesión |
+
+> **`muted_ms` y `deafened_ms` son excluyentes**: quien está ensordecido no
+> suma al muteado, aunque Discord lo mutee a la vez. Ver
+> [RECAP.md](RECAP.md#muteado-y-ensordecido-son-excluyentes).
 | `muted_since` / `deafened_since` / `video_since` / `streaming_since` | INTEGER | Marca de cuándo empezó el estado actual. Se vuelcan a los acumuladores al cerrar |
 | `was_estimated` | INTEGER | `1` = no se cerró con el usuario saliendo, sino que el bot se cayó y se cerró en el último latido conocido |
+
+### `applied_migrations`
+
+Correcciones de **datos** ya aplicadas (`name`, `applied_at`). Las migraciones
+de **esquema** no la necesitan: se detectan solas comparando columnas con
+`PRAGMA table_info`. Una corrección de datos, en cambio, no se nota mirando la
+estructura, así que sin este registro se reaplicaría en cada arranque —
+restando dos veces, por ejemplo.
 
 ### `bot_heartbeat`
 

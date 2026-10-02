@@ -30,9 +30,19 @@ function esCanalAfk(guild, channelId) {
  * reversible.
  */
 function leerEstado(voiceState) {
+  const ensordecido = voiceState.selfDeaf || voiceState.serverDeaf || false;
+
   return {
-    muted: voiceState.selfMute || voiceState.serverMute || false,
-    deafened: voiceState.selfDeaf || voiceState.serverDeaf || false,
+    // Muteado y ensordecido son EXCLUYENTES. Discord mutea automaticamente a
+    // quien se ensordece, asi que contar ambos haria que el ranking de muteado
+    // fuese una copia del de ensordecido (alguien tenia 1839 min "muteado" de los
+    // que 1764 eran en realidad sordera).
+    //
+    // Con esto cada estado mide lo suyo:
+    //   muteado    -> esta escuchando pero no habla  (el oyente)
+    //   ensordecido-> ni habla ni escucha            (el fantasma)
+    muted: (voiceState.selfMute || voiceState.serverMute || false) && !ensordecido,
+    deafened: ensordecido,
     video: voiceState.selfVideo || false,
     streaming: voiceState.streaming || false,
   };

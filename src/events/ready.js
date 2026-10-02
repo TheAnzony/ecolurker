@@ -4,7 +4,7 @@ const logger = require('../utils/logger');
 const { initializeGuild } = require('../services/guildSetupService');
 const { syncAllGuilds } = require('../services/roleSyncService');
 const { startDashboard } = require('../dashboard/server');
-const { initializeTracking } = require('../services/recap/sessionTracker');
+const { initializeTracking, reconciliarSesiones } = require('../services/recap/sessionTracker');
 
 module.exports = {
   name: Events.ClientReady,
@@ -25,6 +25,12 @@ module.exports = {
       syncAllGuilds(client).catch((err) =>
         logger.error('Fallo la sincronizacion periodica:', err.message)
       );
+      // Aislado del resto: una sesion huerfana no debe impedir el sync de roles
+      try {
+        reconciliarSesiones(client);
+      } catch (err) {
+        logger.error('Fallo la reconciliacion de sesiones:', err.message);
+      }
     }, intervalMs);
 
     logger.info(`Sincronizacion de rol programada cada ${config.syncIntervalHours}h`);

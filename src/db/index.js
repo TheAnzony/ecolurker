@@ -106,6 +106,46 @@ unaVez('muted_sin_deafened', 'separar tiempo muteado de ensordecido', () => {
   return r.changes;
 });
 
+// Durante un tiempo una persona podia acabar con dos sesiones abiertas a la vez
+// (si se perdia su evento de salida), y al salir solo se cerraba la mas
+// reciente: la vieja seguia creciendo hasta que otro evento la cerraba por
+// casualidad. Asi una sesion de hora y media quedo registrada como de 25 horas.
+//
+// Nadie puede estar en dos canales a la vez, asi que una sesion no puede durar
+// mas alla del inicio de la siguiente de esa misma persona: ese es el tope que
+// se aplica. Sigue siendo una cota superior (pudo irse antes), por eso quedan
+// marcadas como estimadas.
+unaVez('sesiones_solapadas', 'recortar sesiones que invadian a la siguiente', () => {
+  const sobrantes = db
+    .prepare(
+      `SELECT a.id, a.started_at, a.ended_at,
+              (SELECT MIN(b.started_at) FROM voice_sessions b
+                WHERE b.user_id = a.user_id AND b.guild_id = a.guild_id
+                  AND b.started_at > a.started_at) AS siguiente
+       FROM voice_sessions a
+       WHERE a.ended_at IS NOT NULL`
+    )
+    .all()
+    .filter((r) => r.siguiente && r.ended_at > r.siguiente);
+
+  const recortar = db.prepare(
+    `UPDATE voice_sessions SET
+       ended_at      = @fin,
+       was_estimated = 1,
+       -- Un estado no puede haber durado mas que la propia sesion
+       muted_ms      = MIN(muted_ms, @dur),
+       deafened_ms   = MIN(deafened_ms, @dur),
+       video_ms      = MIN(video_ms, @dur),
+       streaming_ms  = MIN(streaming_ms, @dur)
+     WHERE id = @id`
+  );
+
+  for (const r of sobrantes) {
+    recortar.run({ id: r.id, fin: r.siguiente, dur: r.siguiente - r.started_at });
+  }
+  return sobrantes.length;
+});
+
 logger.info(`Base de datos lista en ${config.dbPath}`);
 
 module.exports = db;

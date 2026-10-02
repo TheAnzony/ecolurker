@@ -88,6 +88,28 @@ WHERE user_id = ? AND is_afk = 1 AND ended_at IS NOT NULL
 Además queda bien al presentarlo: *"40 horas en el servidor — 32 hablando y 8
 tirado en el AFK"*.
 
+### Una sola sesión abierta por persona
+
+Nadie puede estar en dos canales de voz a la vez, así que **nunca debe haber
+dos sesiones abiertas de la misma persona**. Se garantiza por tres vías:
+
+1. `abrirSesion` cierra cualquier sesión abierta previa de esa persona antes
+   de crear la nueva.
+2. Una **reconciliación horaria** recorre las sesiones abiertas y cierra las de
+   quien ya no esté en ese canal según Discord.
+3. Al arrancar y al apagar se cierran todas las que queden.
+
+Hace falta porque un evento de salida puede perderse (un corte del gateway, una
+reconexión). Sin la invariante, al salir solo se cerraba la sesión *más
+reciente* y la vieja se quedaba abierta creciendo hasta que otro evento la
+cerraba por casualidad: así una sesión de hora y media quedó registrada como de
+casi 25 horas, y 16 sesiones acumularon **103 horas inventadas**.
+
+Los datos ya guardados se corrigieron recortando cada sesión al inicio de la
+siguiente de esa misma persona. Sigue siendo una **cota superior** —pudo irse
+antes—, por eso quedan marcadas con `was_estimated` y el panel las muestra con
+un asterisco.
+
 ### Muteado y ensordecido son excluyentes
 
 Discord **mutea automáticamente a quien se ensordece**. Si se contaran los dos

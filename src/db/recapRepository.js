@@ -33,6 +33,7 @@ const statements = {
     UPDATE voice_sessions SET
       ended_at        = @endedAt,
       left_empty      = @leftEmpty,
+      was_estimated   = MAX(was_estimated, @estimada),
       muted_ms        = @mutedMs,
       deafened_ms     = @deafenedMs,
       video_ms        = @videoMs,
@@ -59,6 +60,13 @@ const statements = {
 
   getAllOpenSessions: db.prepare(`
     SELECT * FROM voice_sessions WHERE ended_at IS NULL
+  `),
+
+  getOpenSessionsForGuild: db.prepare(`
+    SELECT s.*, m.display_name
+    FROM voice_sessions s
+    LEFT JOIN members m ON m.user_id = s.user_id AND m.guild_id = s.guild_id
+    WHERE s.guild_id = @guildId AND s.ended_at IS NULL
   `),
 
   closeEstimated: db.prepare(`
@@ -143,6 +151,10 @@ function getOpenSession(guildId, userId) {
   return statements.getOpenSession.get({ guildId, userId }) ?? null;
 }
 
+function getOpenSessionsForGuild(guildId) {
+  return statements.getOpenSessionsForGuild.all({ guildId });
+}
+
 /**
  * Cierra los cronometros abiertos y devuelve los acumuladores finales.
  * Un estado que seguia activo al cerrar suma desde su marca hasta `at`.
@@ -157,7 +169,7 @@ function flushTimers(session, at) {
   return totals;
 }
 
-function closeSession(session, endedAt, leftEmpty = false) {
+function closeSession(session, endedAt, leftEmpty = false, { estimada = false } = {}) {
   // Una sesion no puede terminar antes de empezar. Pasa si el reloj del
   // sistema salta hacia atras a mitad de sesion (NTP corrigiendo una hora
   // desincronizada al arrancar el PC); sin esta guarda quedaria guardada una
@@ -168,6 +180,7 @@ function closeSession(session, endedAt, leftEmpty = false) {
     id: session.id,
     endedAt: cierre,
     leftEmpty: leftEmpty ? 1 : 0,
+    estimada: estimada ? 1 : 0,
     mutedMs: totals.mutedMs,
     deafenedMs: totals.deafenedMs,
     videoMs: totals.videoMs,
@@ -302,6 +315,7 @@ const closeAllSessionsGracefully = db.transaction((at = Date.now()) => {
       id: sesion.id,
       endedAt: at,
       leftEmpty: 0,
+      estimada: 0,
       mutedMs: totals.mutedMs,
       deafenedMs: totals.deafenedMs,
       videoMs: totals.videoMs,
@@ -327,6 +341,7 @@ function deleteUserSessions(guildId, userId) {
 module.exports = {
   openSession,
   getOpenSession,
+  getOpenSessionsForGuild,
   closeSession,
   applyStateChange,
   closeOrphanSessions,

@@ -59,6 +59,21 @@ function abrirSesion(member, voiceState, { fromMove = false, fromRestart = false
   if (!channel) return;
 
   const guild = member.guild;
+
+  // Nadie puede estar en dos canales a la vez: como mucho hay UNA sesion
+  // abierta por persona. Si queda otra, es que se perdio su evento de salida
+  // (un corte del gateway, por ejemplo). Sin cerrarla aqui se quedaria abierta
+  // acumulando horas, porque al salir solo se cierra la mas reciente: asi es
+  // como una sesion de hora y media acabo registrada como de casi 25 horas.
+  const huerfana = recapRepository.getOpenSession(guild.id, member.id);
+  if (huerfana) {
+    recapRepository.closeSession(huerfana, Date.now(), false, { estimada: true });
+    logger.warn(
+      `${member.user.tag} tenia una sesion sin cerrar en "${huerfana.channel_name}" ` +
+        '(evento de salida perdido). Cerrada antes de abrir la nueva.'
+    );
+  }
+
   const enAfk = esCanalAfk(guild, channel.id);
 
   recapRepository.openSession({
@@ -223,6 +238,38 @@ function initializeTracking(client) {
 }
 
 /**
+ * Cierra las sesiones abiertas de quien ya no esta en ese canal.
+ *
+ * Hace falta porque un evento de salida puede perderse (corte del gateway,
+ * reconexion) y entonces la sesion se queda abierta creciendo sin limite. La
+ * invariante de "una sesion abierta por persona" ya corrige el caso en que esa
+ * persona vuelve a entrar, pero si no vuelve, nadie la cerraria.
+ *
+ * El momento exacto de salida es desconocido, asi que se cierra al detectarlo y
+ * se marca como estimada; corriendo cada hora, el error queda acotado a eso.
+ */
+function reconciliarSesiones(client) {
+  if (!config.recapEnabled) return 0;
+
+  let cerradas = 0;
+  for (const guild of client.guilds.cache.values()) {
+    for (const sesion of recapRepository.getOpenSessionsForGuild(guild.id)) {
+      const estado = guild.voiceStates.cache.get(sesion.user_id);
+      const sigueAhi = estado?.channelId === sesion.channel_id;
+      if (sigueAhi) continue;
+
+      recapRepository.closeSession(sesion, Date.now(), false, { estimada: true });
+      cerradas += 1;
+      logger.warn(
+        `Sesion huerfana cerrada: ${sesion.display_name || sesion.user_id} ya no esta en ` +
+          `"${sesion.channel_name}" (se perdio su evento de salida)`
+      );
+    }
+  }
+  return cerradas;
+}
+
+/**
  * Cierre ordenado al apagar el bot. Docker manda SIGTERM antes de parar el
  * contenedor, asi que un reinicio voluntario (el caso habitual) cierra las
  * sesiones con la hora exacta y no pierde nada.
@@ -235,4 +282,9 @@ function shutdownTracking() {
   return cerradas;
 }
 
-module.exports = { handleVoiceStateUpdate, initializeTracking, shutdownTracking };
+module.exports = {
+  handleVoiceStateUpdate,
+  initializeTracking,
+  reconciliarSesiones,
+  shutdownTracking,
+};

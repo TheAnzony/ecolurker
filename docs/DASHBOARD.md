@@ -29,8 +29,11 @@ panel: son cosas que cada cual mira de sí mismo, no un ranking público.
   (la suma de ambas) y cuántas personas han pasado por voz.
 - **Rankings**: más horas de voz, más tiempo en el AFK, muteado, ensordecido,
   compartiendo pantalla y con cámara.
-- **Canales más usados** y **sesiones más largas** (las cerradas por una caída
-  del bot se marcan con `*`, porque su duración es aproximada).
+- **Canales más usados** y **sesiones más largas**, con **una sola entrada por
+  persona**: solo compite el mejor registro de cada uno, para que quien acumule
+  varias sesiones largas no cope el top entero. Las marcadas con `*` tienen
+  duración aproximada (cerradas por una caída del bot o por haberse perdido su
+  evento de salida).
 - **A qué hora se conecta la gente** y **horas de voz por mes**.
 
 Los rankings incluyen a quien está conectado **ahora mismo**: una sesión aún

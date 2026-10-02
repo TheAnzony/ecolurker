@@ -104,17 +104,28 @@ function canalesMasUsados(guildId, anio, limite = 8) {
     .all({ guildId, ...baseParams(anio) });
 }
 
+/**
+ * El record de sesion mas larga, UNA POR PERSONA.
+ *
+ * Sin el ROW_NUMBER, quien acumula varias sesiones largas copaba el top con
+ * todas ellas y tapaba al resto; aqui solo compite el mejor registro de cada
+ * uno, que es lo que hace interesante un ranking.
+ */
 function sesionesMasLargas(guildId, anio, limite = 5) {
   return db
     .prepare(
-      `SELECT COALESCE(m.display_name, s.user_id) AS nombre,
-              s.channel_name AS canal,
-              s.started_at AS inicio,
-              s.was_estimated AS estimada,
-              ${DURACION} AS ms
-       FROM voice_sessions s
-       LEFT JOIN members m ON m.user_id = s.user_id AND m.guild_id = s.guild_id
-       WHERE ${FILTRO} AND s.is_afk = 0
+      `SELECT nombre, canal, inicio, estimada, ms FROM (
+         SELECT COALESCE(m.display_name, s.user_id) AS nombre,
+                s.channel_name AS canal,
+                s.started_at AS inicio,
+                s.was_estimated AS estimada,
+                ${DURACION} AS ms,
+                ROW_NUMBER() OVER (PARTITION BY s.user_id ORDER BY ${DURACION} DESC) AS puesto
+         FROM voice_sessions s
+         LEFT JOIN members m ON m.user_id = s.user_id AND m.guild_id = s.guild_id
+         WHERE ${FILTRO} AND s.is_afk = 0
+       )
+       WHERE puesto = 1
        ORDER BY ms DESC
        LIMIT ${limite}`
     )
